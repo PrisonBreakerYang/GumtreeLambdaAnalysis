@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
-    <artifactId>BugFinder</artifactId>
+    <artifactId>GumtreeLambdaAnalysis</artifactId>
     <version>1.0-SNAPSHOT</version>
     <build>
         <plugins>
@@ -45,6 +45,11 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.30</version>
         </dependency>
+
+
+
+
     </dependencies>
+    
 
 </project>
