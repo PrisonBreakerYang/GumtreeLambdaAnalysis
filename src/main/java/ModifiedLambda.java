@@ -16,6 +16,17 @@ public class ModifiedLambda
     DiffEntry diffEntry;
     CompilationUnit cu;
     PositionTuple pos;
+    float actionNum;
+    int posLength;      //count by position
+    int lineLength;     //count by lines
+    int linesOfActions;
+    float action_avg;
+    float actionDepth_avg;
+    float actionHeight_avg;
+    float actionSize_avg;
+    int actionDepth_max, actionHeight_max, actionSize_max;
+    boolean oneLineLambda;
+    boolean messageRelatedToKeywords;
 
 
     public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos)

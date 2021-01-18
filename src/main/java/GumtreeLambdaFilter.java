@@ -3,6 +3,7 @@ import com.github.gumtreediff.actions.EditScriptGenerator;
 import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.client.Run;
+import com.github.gumtreediff.gen.SyntaxException;
 import com.github.gumtreediff.gen.TreeGenerators;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
@@ -44,30 +45,6 @@ class PositionTuple
     }
 }
 
-//class PositionTupleMap
-//{
-//    PositionTuple positionTupleOld, positionTupleNew;
-//    String type;
-//    public PositionTupleMap(int none, PositionTuple positionTupleNew)
-//    {
-//        this.positionTupleOld = null;
-//        this.positionTupleNew = positionTupleNew;
-//        this.type = "lambda only in new file";
-//    }
-//    public PositionTupleMap(PositionTuple positionTupleOld, int none)
-//    {
-//        this.positionTupleOld = positionTupleOld;
-//        this.positionTupleNew = null;
-//        this.type = "lambda only in old file";
-//    }
-//    public PositionTupleMap(PositionTuple positionTupleOld, PositionTuple positionTupleNew)
-//    {
-//        this.positionTupleOld = positionTupleOld;
-//        this.positionTupleNew = positionTupleNew;
-//        this.type = "lambda map";
-//    }
-//}
-
 public class GumtreeLambdaFilter {
     private final Repository repo;
     private final Git git;
@@ -75,6 +52,8 @@ public class GumtreeLambdaFilter {
     private final Stemmer stemmer;
     private final int threshold;
     List<ModifiedLambda> modifiedLambdas;
+
+
 
     public GumtreeLambdaFilter(List<ModifiedLambda> modifiedLambdas, String url, String repoPath, int editThreshold) throws IOException, GitAPIException {
         assert url.endsWith(".git");
@@ -101,30 +80,17 @@ public class GumtreeLambdaFilter {
         walkAllCommits(repo, url);
     }
 
-    boolean actionRelatedToLambda(Action action, List<PositionTuple> lambdaPositions, List<PositionTuple> lambdaPositions_new) {
-        List<PositionTuple> lambdaPositions_target;
-        if (action.getName().contains("insert"))
-        {
-            lambdaPositions_target = lambdaPositions_new;
-        } else lambdaPositions_target = lambdaPositions;
-        for (PositionTuple lambdaPosition : lambdaPositions_target)
-        {
-            if (action.getNode().getPos() >= lambdaPosition.beginPos && action.getNode().getEndPos() <= lambdaPosition.endPos)
-            {
-                lambdaPosition.count = true;
-                return true;
-            }
-        }
-        return false;
-    }
-
 
     void gumTreeDiffBetweenParent(RevCommit currentCommit, RevCommit parentCommit, String url) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         DiffFormatter formatter = new DiffFormatter(outputStream);
         formatter.setRepository(repo);
         List<DiffEntry> diffs = formatter.scan(parentCommit, currentCommit);
-
+        String[] keywords = {"bug", "fix", "issue", "error", "crash"};
+        if (!commitRelatedToKeywords(currentCommit, keywords))
+        {
+            return;
+        }
         diffs.forEach(diff ->
         {
             if (diff.getChangeType() == DiffEntry.ChangeType.DELETE || diff.getChangeType() == DiffEntry.ChangeType.ADD
@@ -179,8 +145,11 @@ public class GumtreeLambdaFilter {
                         newFile.flush();
 
                         Run.initGenerators();
+
                         Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
                         Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+
+
                         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
                         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
                         //System.out.println(mappings);
@@ -248,8 +217,9 @@ public class GumtreeLambdaFilter {
 
                         oldFile.close();
                         newFile.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    } catch (SyntaxException e) {
+                        return;
+                        //e.printStackTrace();
                     }
                 }
                 if (fileContentBeforeCommit == null) {
@@ -294,54 +264,140 @@ public class GumtreeLambdaFilter {
     }
     public void statisticsOfModifiedLambdas(List<ModifiedLambda> modifiedLambdas)
     {
+        //how many actions in a single lambda
+        //how much proportion of lambdas are revised (count by lines, insert not included)  *
+        //the distribution of action type [action, node]    *
+        //average actions in one-line lambda and multi-line lambda
+        //average and max action node depth (how far the node from the root)
+        //average and max action node height (how far the farthest leaf node away from the node)
+        //average and max action node size (the number of the node and its descendents)
+        for (ModifiedLambda modifiedLambda : modifiedLambdas)
+        {
+            modifiedLambda.actionNum = modifiedLambda.actionList.size();
+            modifiedLambda.lineLength = modifiedLambda.pos.endLine - modifiedLambda.pos.beginLine + 1;
+            modifiedLambda.posLength = modifiedLambda.pos.endPos - modifiedLambda.pos.beginPos + 1;
+            modifiedLambda.oneLineLambda = modifiedLambda.lineLength == 1;
+            modifiedLambda.action_avg = modifiedLambda.actionNum / modifiedLambda.lineLength;
+            int depthSum = 0;
+            int heightSum = 0;
+            int sizeSum = 0;
+            modifiedLambda.actionDepth_max = 0;
+            modifiedLambda.actionHeight_max = 0;
+            modifiedLambda.actionSize_max = 0;
+            for (Action action : modifiedLambda.actionList)
+            {
+                depthSum += action.getNode().getMetrics().depth;
+                heightSum += action.getNode().getMetrics().height;
+                sizeSum += action.getNode().getMetrics().size;
+                modifiedLambda.actionDepth_max = Math.max(action.getNode().getMetrics().depth, modifiedLambda.actionDepth_max);
+                modifiedLambda.actionHeight_max = Math.max(action.getNode().getMetrics().height, modifiedLambda.actionHeight_max);
+                modifiedLambda.actionSize_max = Math.max(action.getNode().getMetrics().size, modifiedLambda.actionSize_max);
+            }
+            modifiedLambda.actionDepth_avg = depthSum / modifiedLambda.actionNum;
+            modifiedLambda.actionHeight_avg = heightSum / modifiedLambda.actionNum;
+            modifiedLambda.actionSize_avg = sizeSum / modifiedLambda.actionNum;
+        }
+    }
+    public boolean commitRelatedToKeywords(ModifiedLambda lambda, String[] keywords)
+    {
+        RevCommit commit = lambda.currentCommit;
+        String message = commit.getFullMessage().toLowerCase();
+        stemmer.add(message.toCharArray(), message.length());
+        stemmer.stem();
+        String stemMsg = stemmer.toString();
+        String[] tokens = stemMsg.split("\\W+");
 
+        for (String keyword : keywords)
+        {
+            for (String token : tokens)
+            {
+                if (token.equals(keyword))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    public boolean commitRelatedToKeywords(RevCommit commit, String[] keywords)
+    {
+        String message = commit.getFullMessage().toLowerCase();
+        stemmer.add(message.toCharArray(), message.length());
+        stemmer.stem();
+        String stemMsg = stemmer.toString();
+        String[] tokens = stemMsg.split("\\W+");
+
+        for (String keyword : keywords)
+        {
+            for (String token : tokens)
+            {
+                if (token.equals(keyword))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static void main(String[] args) throws IOException, GitAPIException {
+
         try {
+            String[] keywords = {"bug", "fix", "issue", "error", "crash"};
+            String[] projectList = { "google/guava", "jenkinsci/jenkins", "bazelbuild/bazel", "apache/skywalking", "apache/flink"};
+            //String[] projectList = {"apache/flink"};
             PrintStream out = System.out;
             Date date = new Date();
             SimpleDateFormat ft = new SimpleDateFormat("MM-dd-HH-mm");
             PrintStream ps = new PrintStream("./log-" + ft.format(date) + ".txt");
             System.setOut(ps);
+            System.out.println("This is the filter result of projects: " + Arrays.toString(projectList));
+            System.out.println("The filter keywords include: " + Arrays.toString(keywords));
 
             List<ModifiedLambda> modifiedLambdas = new ArrayList<>();
 
-            //String url = "https://github.com/real-logic/aeron.git";
-            String url = "https://github.com/ACRA/acra.git";
-            String repoURL = url.substring(0, url.lastIndexOf(".git"));
-            GumtreeLambdaFilter filter = new GumtreeLambdaFilter(modifiedLambdas, url, null, 10);
+            for (String project : projectList) {
+                System.err.println("Mining project " + project + "...");
+                //String url = "https://github.com/ACRA/acra.git";
+                String url = "https://github.com/" + project + ".git";
+                String repoURL = url.substring(0, url.lastIndexOf(".git"));
+                GumtreeLambdaFilter filter = new GumtreeLambdaFilter(modifiedLambdas, url, null, 10);
 
-            for (ModifiedLambda modifiedLambda : modifiedLambdas)
-            {
-                System.out.println("\n" + "######################################");
-                System.out.println("MODIFIED LAMBDA");
-                System.out.println("repo: " + modifiedLambda.repo.toString());
-                System.out.println("new file path: " + modifiedLambda.diffEntry.getNewPath());
-                System.out.println("old file path: " + modifiedLambda.diffEntry.getOldPath());
-                System.out.println("modified lambda line: " + "L" + modifiedLambda.pos.beginLine + " - " + "L" + modifiedLambda.pos.endLine);
-                System.out.println("current commit: " + modifiedLambda.currentCommit);
-                System.out.println("parent commit: " + modifiedLambda.parentCommit);
-                System.out.println("git command:    " + "git diff " + modifiedLambda.parentCommit.toString().split(" ")[1] + " "
-                        + modifiedLambda.currentCommit.toString().split(" ")[1] +" " + modifiedLambda.diffEntry.getNewPath());
-                System.out.println("commit message: " + modifiedLambda.currentCommit.getFullMessage());
-                System.out.println("diff hash code: " + modifiedLambda.diffEntry.hashCode());
-                //System.out.println("diffEntry: " + modifiedLambda.diffEntry.toString());
-                System.out.println("commit url: " + repoURL + "/commit/" + modifiedLambda.currentCommit.toString().split(" ")[1]);
-                for (Action action : modifiedLambda.actionList)
-                {
-                    System.out.println("++++++++++++++++++++++++++++++++++++");
-                    System.out.println("ACTION");
-                    System.out.println("change type: " + action.getName());
-                    System.out.println("action node: " + action.getNode());
-                    System.out.println("action node position: " + "[" + action.getNode().getPos() + ", " + action.getNode().getEndPos() + "]");
-                    System.out.println("action node line: " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getPos())
-                            + " - " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getEndPos()));
-                    System.out.println("action: " + action.toString());
-                    System.out.println("\n");
+                for (ModifiedLambda modifiedLambda : modifiedLambdas) {
+                    //test here. test whether the filter works.
+
+//                    if (!filter.commitRelatedToKeywords(modifiedLambda, keywords))
+//                    {
+//                        continue;
+//                    }
+                    System.out.println("\n" + "######################################");
+                    System.out.println("MODIFIED LAMBDA");
+                    System.out.println("repo: " + modifiedLambda.repo.toString());
+                    System.out.println("new file path: " + modifiedLambda.diffEntry.getNewPath());
+                    System.out.println("old file path: " + modifiedLambda.diffEntry.getOldPath());
+                    System.out.println("modified lambda line: " + "L" + modifiedLambda.pos.beginLine + " - " + "L" + modifiedLambda.pos.endLine);
+                    System.out.println("current commit: " + modifiedLambda.currentCommit);
+                    System.out.println("parent commit: " + modifiedLambda.parentCommit);
+                    System.out.println("git command:    " + "git diff " + modifiedLambda.parentCommit.toString().split(" ")[1] + " "
+                            + modifiedLambda.currentCommit.toString().split(" ")[1] + " " + modifiedLambda.diffEntry.getNewPath());
+                    System.out.println("commit message: " + modifiedLambda.currentCommit.getFullMessage());
+                    System.out.println("diff hash code: " + modifiedLambda.diffEntry.hashCode());
+                    //System.out.println("diffEntry: " + modifiedLambda.diffEntry.toString());
+                    System.out.println("commit url: " + repoURL + "/commit/" + modifiedLambda.currentCommit.toString().split(" ")[1]);
+                    for (Action action : modifiedLambda.actionList) {
+                        System.out.println("++++++++++++++++++++++++++++++++++++");
+                        System.out.println("ACTION");
+                        System.out.println("change type: " + action.getName());
+                        System.out.println("action node: " + action.getNode());
+                        System.out.println("action node position: " + "[" + action.getNode().getPos() + ", " + action.getNode().getEndPos() + "]");
+                        System.out.println("action node line: " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getPos())
+                                + " - " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getEndPos()));
+                        System.out.println("action: " + action.toString());
+                        System.out.println("\n");
+                    }
                 }
+                System.err.println("project " + project + " mining completed!");
             }
-            //String repoName = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf(".git"));
             System.setOut(out);
             System.out.println("Program Finished.");
         } catch (FileNotFoundException e) {

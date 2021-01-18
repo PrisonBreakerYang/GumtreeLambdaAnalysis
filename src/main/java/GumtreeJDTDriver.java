@@ -116,6 +116,7 @@ public class GumtreeJDTDriver
         for (Action action : actions) {
             System.out.println(action.getName());
             System.out.println(action.getNode());
+            System.out.println(action.getNode().getMetrics());
         }
     }
 }
