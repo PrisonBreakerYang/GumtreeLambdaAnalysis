@@ -7,29 +7,21 @@ import com.github.gumtreediff.gen.TreeGenerators;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.diff.Edit;
-import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
-import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.util.IO;
 
 import java.io.*;
-import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -52,29 +44,29 @@ class PositionTuple
     }
 }
 
-class PositionTupleMap
-{
-    PositionTuple positionTupleOld, positionTupleNew;
-    String type;
-    public PositionTupleMap(int none, PositionTuple positionTupleNew)
-    {
-        this.positionTupleOld = null;
-        this.positionTupleNew = positionTupleNew;
-        this.type = "lambda only in new file";
-    }
-    public PositionTupleMap(PositionTuple positionTupleOld, int none)
-    {
-        this.positionTupleOld = positionTupleOld;
-        this.positionTupleNew = null;
-        this.type = "lambda only in old file";
-    }
-    public PositionTupleMap(PositionTuple positionTupleOld, PositionTuple positionTupleNew)
-    {
-        this.positionTupleOld = positionTupleOld;
-        this.positionTupleNew = positionTupleNew;
-        this.type = "lambda map";
-    }
-}
+//class PositionTupleMap
+//{
+//    PositionTuple positionTupleOld, positionTupleNew;
+//    String type;
+//    public PositionTupleMap(int none, PositionTuple positionTupleNew)
+//    {
+//        this.positionTupleOld = null;
+//        this.positionTupleNew = positionTupleNew;
+//        this.type = "lambda only in new file";
+//    }
+//    public PositionTupleMap(PositionTuple positionTupleOld, int none)
+//    {
+//        this.positionTupleOld = positionTupleOld;
+//        this.positionTupleNew = null;
+//        this.type = "lambda only in old file";
+//    }
+//    public PositionTupleMap(PositionTuple positionTupleOld, PositionTuple positionTupleNew)
+//    {
+//        this.positionTupleOld = positionTupleOld;
+//        this.positionTupleNew = positionTupleNew;
+//        this.type = "lambda map";
+//    }
+//}
 
 public class GumtreeLambdaFilter {
     private final Repository repo;
@@ -126,23 +118,12 @@ public class GumtreeLambdaFilter {
         return false;
     }
 
-    //此函数由commit前文件的lambda表达式位置得到commit后文件lambda表达式位置
-//    List<PositionTupleMap> getPositionTupleMap(List<PositionTuple> positionTupleOldList)
-//    {
-//        List<PositionTupleMap> positionTupleMapList = new ArrayList<>();
-//        for (PositionTuple positionTupleOld : positionTupleOldList)
-//        {
-//
-//            positionTupleMapList.add(PositionTupleMap(positionTupleOld, ));
-//        }
-//        return positionTupleMapList;
-//    }
+
     void gumTreeDiffBetweenParent(RevCommit currentCommit, RevCommit parentCommit, String url) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         DiffFormatter formatter = new DiffFormatter(outputStream);
         formatter.setRepository(repo);
         List<DiffEntry> diffs = formatter.scan(parentCommit, currentCommit);
-        //System.out.println(diffs.size());
 
         diffs.forEach(diff ->
         {
@@ -187,19 +168,19 @@ public class GumtreeLambdaFilter {
 
                     FileWriter oldFile, newFile;
                     try {
-                        oldFile = new FileWriter("D:\\SEproject\\BugFinder-master\\old-new-file\\oldfile.java");
+                        oldFile = new FileWriter("old-new-file\\oldfile.java");
                         oldFile.write("");
                         oldFile.write(new String(fileContentBeforeCommit.getBytes()));
                         oldFile.flush();
 
-                        newFile = new FileWriter("D:\\SEproject\\BugFinder-master\\old-new-file\\newfile.java");
+                        newFile = new FileWriter("old-new-file\\newfile.java");
                         newFile.write("");
                         newFile.write(new String(fileContentAfterCommit.getBytes()));
                         newFile.flush();
 
                         Run.initGenerators();
-                        Tree oldFileTree = TreeGenerators.getInstance().getTree("D:\\SEproject\\BugFinder-master\\old-new-file\\oldfile.java").getRoot();
-                        Tree newFileTree = TreeGenerators.getInstance().getTree("D:\\SEproject\\BugFinder-master\\old-new-file\\newfile.java").getRoot();
+                        Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
+                        Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
                         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
                         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
                         //System.out.println(mappings);
@@ -209,24 +190,7 @@ public class GumtreeLambdaFilter {
                         boolean diffRelatedToLambda = false;
                         boolean actionTraveled = false;
 
-                        List<PositionTupleMap> positionTupleMapList = new ArrayList<>();
-//                        for (PositionTuple positionTuple : positionTupleList)
-//                        {
-//                            if (oldFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).isEmpty())
-//                            {
-//                                //表示commit前文件的lambda在commit后文件中找不到
-//                                positionTupleMapList.add(new PositionTupleMap(positionTuple, 0));
-//                            }
-//                            else
-//                            {
-//                                Tree lambdaNewTree = mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).get(0));
-//                                int lambdaNewTreePos = mappings.getDstForSrc(lambdaNewTree).getPos();
-//                                int lambdaNewTreeEndPos = mappings.getDstForSrc(lambdaNewTree).getEndPos();
-//                                int lambdaNewTreeStartLine = gumtreeJDTDriver_new.cu.getLineNumber(lambdaNewTreePos);
-//                                int lambdaNewTreeEndLine = gumtreeJDTDriver_new.cu.getLineNumber(lambdaNewTreeEndPos);
-//                                positionTupleMapList.add(new PositionTupleMap(positionTuple, new PositionTuple(lambdaNewTreePos, lambdaNewTreeEndPos, lambdaNewTreeStartLine, lambdaNewTreeEndLine)));
-//                            }
-//                        }
+                        //List<PositionTupleMap> positionTupleMapList = new ArrayList<>();
 
                         //遍历当前diff所有positionTuple
                         for (PositionTuple positionTuple : positionTupleList)
@@ -281,27 +245,6 @@ public class GumtreeLambdaFilter {
                                 }
                             }
                         }
-//                        for (PositionTuple positionTuple : positionTupleList_new)
-//                        {
-//                            for (Action action : actions)
-//                            {
-//                                if (action.getName().contains("insert") && action.getNode().getPos() >= positionTuple.beginPos
-//                                && action.getNode().getEndPos() <= positionTuple.endPos)
-//                                {
-//                                    if (!positionTuple.count)
-//                                    {
-//                                        ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver_new.cu, positionTuple);
-//                                        newLambda.actionList.add(action);
-//                                        this.modifiedLambdas.add(newLambda);
-//                                        positionTuple.count = true;
-//                                    }
-//                                    else
-//                                    {
-//                                        this.modifiedLambdas.get(this.modifiedLambdas.size() - 1).actionList.add(action);
-//                                    }
-//                                }
-//                            }
-//                        }
 
                         oldFile.close();
                         newFile.close();
@@ -313,11 +256,6 @@ public class GumtreeLambdaFilter {
                     return;
                 }
 
-//                System.out.println("###########################################################");
-//                System.out.println(new String(fileContentBeforeCommit.getBytes()));
-//                System.out.println("-----------------------------------------------------------");
-//                System.out.println(new String(fileContentAfterCommit.getBytes()));
-//                System.out.println("###########################################################");
                 return;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -397,8 +335,6 @@ public class GumtreeLambdaFilter {
                     System.out.println("change type: " + action.getName());
                     System.out.println("action node: " + action.getNode());
                     System.out.println("action node position: " + "[" + action.getNode().getPos() + ", " + action.getNode().getEndPos() + "]");
-//                    System.out.println("action node line: " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getPos())
-//                        + " - " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getEndPos()));
                     System.out.println("action node line: " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getPos())
                             + " - " + "L" + modifiedLambda.cu.getLineNumber(action.getNode().getEndPos()));
                     System.out.println("action: " + action.toString());

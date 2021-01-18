@@ -28,6 +28,4 @@ public class ModifiedLambda
         this.cu = cu;
         this.pos = pos;
     }
-
-
 }

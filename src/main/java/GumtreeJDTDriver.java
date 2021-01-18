@@ -12,10 +12,6 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -109,28 +105,17 @@ public class GumtreeJDTDriver
 
     public static void main(String[] args) throws IOException
     {
-        Path path = Paths.get("C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\lc01.java");
-        String content = Files.readString(path);
-        List<PositionTuple> positionTupleList= new ArrayList<>();
-        GumtreeJDTDriver jdtDriver = new GumtreeJDTDriver(content, positionTupleList);
-
-
+        //this is an example of using gumtree API to obtain actions from a diff
         Run.initGenerators();
-        Tree oldFileTree = TreeGenerators.getInstance().getTree("C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\lc01.java").getRoot();
-        Tree newFileTree = TreeGenerators.getInstance().getTree("C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\lc02.java").getRoot();
+        Tree oldFileTree = TreeGenerators.getInstance().getTree("example\\lc01.java").getRoot();
+        Tree newFileTree = TreeGenerators.getInstance().getTree("example\\lc02.java").getRoot();
         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
-
-        //Tree lambdaNewTree = mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(299, 309).isEmpty());
-        //System.out.println(oldFileTree.getTreesBetweenPositions(299, 309).isEmpty());
-        //System.out.println("start: " + lambdaNewTree.getPos());
-        //System.out.println("end: " + lambdaNewTree.getEndPos());
-        //System.out.println(mappings);
         EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator();
         EditScript actions = editScriptGenerator.computeActions(mappings);
-//        for (Action action : actions) {
-//            System.out.println(action.getName());
-//            System.out.println(action.getNode());
-//        }
+        for (Action action : actions) {
+            System.out.println(action.getName());
+            System.out.println(action.getNode());
+        }
     }
 }
