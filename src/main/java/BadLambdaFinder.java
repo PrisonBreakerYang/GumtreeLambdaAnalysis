@@ -125,15 +125,18 @@ public class BadLambdaFinder {
                     //List<PositionTuple> positionTupleList_new = new ArrayList<>();
                     GumtreeJDTDriver gumtreeJDTDriver = new GumtreeJDTDriver(new String(fileContentBeforeCommit.getBytes()), positionTupleList, true);
                     //GumtreeJDTDriver gumtreeJDTDriver_new = new GumtreeJDTDriver(new String(fileContentAfterCommit.getBytes()), positionTupleList_new, true);
+                    List<Edit> editsLongerThanThreshold = new ArrayList<>();
+                    for (HunkHeader hunk : fileHeader.getHunks())
+                    {
+                        for (Edit edit : hunk.toEditList())
+                        {
+                            if ((edit.getType() == Edit.Type.DELETE || edit.getType() == Edit.Type.REPLACE) && (edit.getEndA() - edit.getBeginA() > threshold))
+                            {
+                                editsLongerThanThreshold.add(edit);
+                            }
+                        }
+                    }
 
-//                    for (HunkHeader hunk : fileHeader.getHunks())
-//                    {
-//                        for (Edit edit : hunk.toEditList())
-//                        {
-//
-//                        }
-//                    }
-                    
                     FileWriter oldFile, newFile;
                     try {
                         oldFile = new FileWriter("old-new-file\\oldfile.java");
@@ -166,7 +169,22 @@ public class BadLambdaFinder {
                         //遍历当前diff所有positionTuple
                         for (PositionTuple positionTuple : positionTupleList)
                         {
-                            PositionTuple positionTupleNew;
+                            boolean lambdaInLongDeletedCode = false;
+                            for (Edit edit : editsLongerThanThreshold)
+                            {
+                                if (positionTuple.beginLine >= edit.getBeginA() + 1 && positionTuple.endLine <= edit.getEndA())
+                                {
+                                    lambdaInLongDeletedCode = true;
+                                    break;
+                                }
+                            }
+
+                            if (lambdaInLongDeletedCode)
+                            {
+                                continue;
+                            }
+
+                            //PositionTuple positionTupleNew;
                             if (mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).get(0)) == null)
                             {
                                 //表示commit前文件的lambda在commit后文件中找不到
@@ -420,6 +438,7 @@ public class BadLambdaFinder {
 
             //String[] projectList = { "google/guava", "jenkinsci/jenkins", "bazelbuild/bazel", "apache/skywalking", "apache/flink"};
             String[] projectList = {"ACRA/acra"};
+            //String[] projectList = {"jenkinsci/jenkins"};
             PrintStream out = System.out;
             Date date = new Date();
             SimpleDateFormat ft = new SimpleDateFormat("MM-dd-HH-mm");
@@ -468,10 +487,11 @@ public class BadLambdaFinder {
                 System.out.println("modified lambda line: " + "L" + modifiedLambda.pos.beginLine + " - " + "L" + modifiedLambda.pos.endLine);
                 System.out.println("current commit: " + modifiedLambda.currentCommit);
                 System.out.println("parent commit: " + modifiedLambda.parentCommit);
-                System.out.println("git command:    " + "git diff " + modifiedLambda.parentCommit.toString().split(" ")[1] + " "
-                        + modifiedLambda.currentCommit.toString().split(" ")[1] + " " + modifiedLambda.diffEntry.getNewPath());
+                System.out.println("git command:    " + "git diff " + modifiedLambda.parentCommit.toString().split(" ")[1].substring(0, 7) + " "
+                        + modifiedLambda.currentCommit.toString().split(" ")[1].substring(0, 7) + " " + modifiedLambda.diffEntry.getNewPath());
                 System.out.println("commit message: " + modifiedLambda.currentCommit.getFullMessage());
                 System.out.println("diff hash code: " + modifiedLambda.diffEntry.hashCode());
+                System.out.println(modifiedLambda.pos.node);
                 //System.out.println("diffEntry: " + modifiedLambda.diffEntry.toString());
 
 //                    System.out.println("max statistics------------ ");

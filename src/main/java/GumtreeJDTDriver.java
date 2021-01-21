@@ -151,7 +151,7 @@ public class GumtreeJDTDriver
             isRelatedToLambda = true;
             //此处不确定要不要取上一层
             PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength(),
-                    cu.getLineNumber(node.getStartPosition()), cu.getLineNumber(node.getStartPosition() + node.getLength()));
+                    cu.getLineNumber(node.getStartPosition()), cu.getLineNumber(node.getStartPosition() + node.getLength()), node);
             //PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength());
             GumtreeJDTDriver.this.positionTupleList.add(newPositionTuple);
 

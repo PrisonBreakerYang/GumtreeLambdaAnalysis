@@ -8,6 +8,7 @@ import com.github.gumtreediff.gen.TreeGenerators;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
@@ -35,6 +36,16 @@ class PositionTuple
     public int beginLine;
     public int endLine;
     public boolean count;
+    public LambdaExpression node;
+    public PositionTuple(int beginPos, int endPos, int beginLine, int endLine, LambdaExpression node)
+    {
+        this.beginPos = beginPos;
+        this.endPos = endPos;
+        this.beginLine = beginLine;
+        this.endLine =endLine;
+        this.count = false;
+        this.node = node;
+    }
     public PositionTuple(int beginPos, int endPos, int beginLine, int endLine)
     {
         this.beginPos = beginPos;
