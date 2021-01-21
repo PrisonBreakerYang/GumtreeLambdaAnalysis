@@ -12,6 +12,7 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ public class GumtreeJDTDriver
         setSourceCode(sourceCode);
     }
 
-    public GumtreeJDTDriver(String sourceCode, List<PositionTuple> positionTupleList)
+    public GumtreeJDTDriver(String sourceCode, List<PositionTuple> positionTupleList, boolean findBadLambda)
     {
         this.positionTupleList = positionTupleList;
         parser = ASTParser.newParser(AST.JLS14);
@@ -42,9 +43,15 @@ public class GumtreeJDTDriver
         options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_14);
         parser.setCompilerOptions(options);
         setSourceCode(sourceCode);
-
-        LambdaFinder lambdaFinder = new LambdaFinder(cu, 0, Integer.MAX_VALUE);
-        cu.accept(lambdaFinder);
+        if (findBadLambda)
+        {
+            BadLambdaFinder badLambdaFinder = new BadLambdaFinder(cu, 0, Integer.MAX_VALUE);
+            cu.accept(badLambdaFinder);
+        }
+        else {
+            LambdaFinder lambdaFinder = new LambdaFinder(cu, 0, Integer.MAX_VALUE);
+            cu.accept(lambdaFinder);
+        }
 
     }
 
@@ -103,6 +110,54 @@ public class GumtreeJDTDriver
         }
     }
 
+    private class BadLambdaFinder extends ASTVisitor
+    {
+        // is code snippet which overlaps [startLine, endLine] related to lambda expression
+        public boolean isRelatedToLambda = false;
+        private final CompilationUnit cu;
+        private final int startLine, endLine;
+        public List<PositionTuple> positionTupleList;
+
+        private BadLambdaFinder(CompilationUnit compilationUnit, int startLine, int endLine)
+        {
+            cu = compilationUnit;
+            this.startLine = startLine;
+            this.endLine = endLine;
+
+        }
+
+        public boolean visit(LambdaExpression node)
+        {
+            ASTNode parent = node.getParent();
+            while (!(parent instanceof Statement || parent instanceof FieldDeclaration || parent instanceof VariableDeclaration))
+            {
+                // According to oracle's document, a lambda expression can only occurs in a
+                // program in someplace other than assignment context, an invocation context,
+                // or a casting context
+                if (parent.getParent() == null)
+                {
+                    break;
+                }
+                parent = parent.getParent();
+            }
+
+            int nodeStartLine = cu.getLineNumber(parent.getStartPosition()), nodeEndPos =
+                    parent.getStartPosition() + parent.getLength(), nodeEndLine = cu.getLineNumber(nodeEndPos);
+            if (nodeStartLine > endLine || nodeEndLine < startLine)
+            {
+                // there is no need to visit the children
+                return false;
+            }
+            isRelatedToLambda = true;
+            //此处不确定要不要取上一层
+            PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength(),
+                    cu.getLineNumber(node.getStartPosition()), cu.getLineNumber(node.getStartPosition() + node.getLength()));
+            //PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength());
+            GumtreeJDTDriver.this.positionTupleList.add(newPositionTuple);
+
+            return true;
+        }
+    }
     public static void main(String[] args) throws IOException
     {
         //this is an example of using gumtree API to obtain actions from a diff
@@ -113,10 +168,36 @@ public class GumtreeJDTDriver
         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
         EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator();
         EditScript actions = editScriptGenerator.computeActions(mappings);
+        Map<String, Integer> actionTypeDict = new HashMap<>();
+//        for (String actionType : modifiedLambda.actionTypeBag)
+//        {
+//            if (!modifiedLambda.actionTypeDict.containsKey(actionType))
+//            {
+//                modifiedLambda.actionTypeDict.put(actionType, 1);
+//            }
+//            if (modifiedLambda.actionTypeDict.containsKey(actionType))
+//            {
+//                Integer value = modifiedLambda.actionTypeDict.get(actionType) + 1;
+//                modifiedLambda.actionTypeDict.put(actionType, value);
+//            }
+//        }
         for (Action action : actions) {
-            System.out.println(action.getName());
+            if (!actionTypeDict.containsKey(action.getName()))
+            {
+                actionTypeDict.put(action.getName(), 1);
+            }
+            else
+            {
+                Integer value = actionTypeDict.get(action.getName()) + 1;
+                actionTypeDict.put(action.getName(), value);
+            }
+            System.out.println(action.getName().split("-")[0]);
+            //System.out.println(action.getNode());
+            //System.out.println(action.getNode().toTreeString());
             System.out.println(action.getNode());
-            System.out.println(action.getNode().getMetrics());
+            System.out.println(action.getNode().getMetrics().size);
+            System.out.println(action.getNode().getLength());
         }
+        System.out.println(actionTypeDict);
     }
 }
