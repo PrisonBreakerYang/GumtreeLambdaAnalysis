@@ -29,6 +29,10 @@ import java.util.*;
 
 import com.github.gumtreediff.tree.Tree;
 
+/*
+this data structure can record the information of the removed lambda expression,
+especially the location information
+*/
 class PositionTuple
 {
     public int beginPos;
@@ -60,6 +64,7 @@ class PositionTuple
     }
 }
 
+@Deprecated
 public class GumtreeLambdaFilter {
     private final Repository repo;
     private final Git git;
@@ -83,7 +88,7 @@ public class GumtreeLambdaFilter {
         }
 
         String repoName = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf(".git"));
-        //String ownerName = url.split("[/ : . # %]")[5];
+        //"/repos" is the path that stores all downloaded GitHub projects(by git clone) 
         if (repoPath == null) {
             repoPath = "repos/" + repoName;
         }
@@ -97,16 +102,19 @@ public class GumtreeLambdaFilter {
         this.modifiedLambdas = modifiedLambdas;
         stemmer = new Stemmer();
         threshold = editThreshold;
-
+        //walk all commits from the head commit
         walkAllCommits(repo, url);
     }
 
-
+    /*
+    this function compares the current commit and its parent commit, walking over different java files
+    */
     void gumTreeDiffBetweenParent(RevCommit currentCommit, RevCommit parentCommit, String url) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         DiffFormatter formatter = new DiffFormatter(outputStream);
         formatter.setRepository(repo);
-        List<DiffEntry> diffs = formatter.scan(parentCommit, currentCommit);
+        List<DiffEntry> diffs = formatter.scan(parentCommit, currentCommit);    //diffs now store all diff information between two commits
+        int fileModified = diffs.size();
         String[] keywords = {"bug", "fix", "issue", "error", "crash"};
         if (!commitRelatedToKeywords(currentCommit, keywords))
         {
@@ -209,7 +217,7 @@ public class GumtreeLambdaFilter {
                                 {
                                     if (!positionTuple.count)
                                     {
-                                        ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver.cu, positionTuple, nodesNum);
+                                        ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver.cu, positionTuple, nodesNum, url.substring(0, url.lastIndexOf(".git")), fileModified);
                                         newLambda.actionList.add(action);
                                         //newLambda.actionTypeBag.add(new String("<" + action.getName().split("-")[0] + " " + action.getNode().getType() + ">"));
                                         this.modifiedLambdas.add(newLambda);
@@ -226,7 +234,7 @@ public class GumtreeLambdaFilter {
                                 {
                                     if (!positionTuple.count)
                                     {
-                                        ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver_new.cu, positionTuple, nodesNum);
+                                        ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver_new.cu, positionTuple, nodesNum, url.substring(0, url.lastIndexOf(".git")), fileModified);
                                         newLambda.actionList.add(action);
                                         //newLambda.actionTypeBag.add(new String("<" + action.getName().split("-")[0] + " " + action.getNode().getType() + ">"));
                                         this.modifiedLambdas.add(newLambda);

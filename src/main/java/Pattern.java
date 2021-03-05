@@ -7,12 +7,14 @@
 //import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.csvreader.CsvWriter;
+import org.eclipse.jgit.revwalk.RevCommit;
 
 import java.io.*;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
+import opennlp.tools.stemmer.PorterStemmer;
 
 public class Pattern
 {
@@ -63,22 +65,32 @@ public class Pattern
     {
         this.modifiedLambdas = modifiedLambdas;
     }
+    static boolean commitRelatedToKeywords(String message, String[] keywords)
+    {
+        PorterStemmer stemmer = new PorterStemmer();
+        if (keywords == null)
+        {
+            return true;
+        }
+        String stemmed = stemmer.stem(message);
+        System.out.println(stemmed);
+        String stemMsg = stemmer.toString();
+        String[] tokens = stemMsg.split("\\W+");
+
+        for (String keyword : keywords)
+        {
+            for (String token : tokens)
+            {
+                if (token.equals(keyword))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     public static void main(String[] args) throws IOException {
-//        Date date = new Date();
-//        SimpleDateFormat ft = new SimpleDateFormat("MM-dd-HH-mm");
-        String filePath = "statistics/statistics.csv";
-//        File xlsxFile = new File(filePath);
-//        Workbook workbook = new XSSFWorkbook(xlsxFile);
-//        Sheet sheet = workbook.getSheetAt(0);
-//        OutputStream out = new FileOutputStream(xlsxFile);
-//        workbook.write(out);
-//
-//        Row header = sheet.createRow(0);
-//        Cell headerCell = header.createCell(0);
-//        headerCell.setCellValue("patterns");
-        CsvWriter csvWriter = new CsvWriter(filePath, ',', Charset.forName("GBK"));
-        String[] headers = {"patterns", "amount", "percentage"};
-        csvWriter.writeRecord(headers);
-        csvWriter.close();
+        String message = "overhead";
+        System.out.println(Pattern.commitRelatedToKeywords(message, new String[]{"overhead"}));
     }
 }

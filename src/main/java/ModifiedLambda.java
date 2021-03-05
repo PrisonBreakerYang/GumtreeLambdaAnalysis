@@ -4,12 +4,46 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 
+import java.io.Serializable;
 import java.util.*;
-
+class SimplifiedModifiedLambda implements Serializable
+{
+    String repo;
+    String commitURL;
+    String filePath;
+    String node;
+    int beginLine;
+    int endLine;
+    int nodesNum;
+    int fileModified;
+    String commitMessage;
+    String currentCommit;
+    String parentCommit;
+    String gitCommand;
+    int javaFileModified;
+    public SimplifiedModifiedLambda(ModifiedLambda modifiedLambda)
+    {
+        this.repo = modifiedLambda.repo.toString();
+        this.commitURL = modifiedLambda.commitURL;
+        this.filePath = modifiedLambda.diffEntry.getNewPath();
+        this.node = modifiedLambda.pos.node.toString();
+        this.beginLine = modifiedLambda.pos.beginLine;
+        this.endLine = modifiedLambda.pos.endLine;
+        this.nodesNum = modifiedLambda.nodesNum;
+        this.fileModified = modifiedLambda.fileModified;
+        this.commitMessage = modifiedLambda.currentCommit.getFullMessage();
+        this.currentCommit = modifiedLambda.currentCommit.toString();
+        this.parentCommit = modifiedLambda.parentCommit.toString();
+        this.gitCommand = "git diff " + modifiedLambda.parentCommit.toString().split(" ")[1] + " "
+                + modifiedLambda.currentCommit.toString().split(" ")[1] + " " + modifiedLambda.diffEntry.getNewPath();
+        this.javaFileModified = modifiedLambda.javaFileModified;
+    }
+}
 public class ModifiedLambda
 {
     List<Action> actionList;
     Repository repo;
+    String commitURL;
     RevCommit currentCommit;
     RevCommit parentCommit;
     DiffEntry diffEntry;
@@ -28,12 +62,14 @@ public class ModifiedLambda
     boolean oneLineLambda;
     boolean messageRelatedToKeywords;
     int nodesNum;
+    int fileModified;
+    int javaFileModified;
     List<String> actionTypeBag;
     Map<String, Integer> actionTypeMap;
     Set<String> actionTypeSet;
 
 
-    public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos, int nodesNum)
+    public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos, int nodesNum, String url, int fileModified, int javaFileModified)
     {
         this.repo = repo;
         this.currentCommit = currentCommit;
@@ -45,5 +81,24 @@ public class ModifiedLambda
         this.cu = cu;
         this.pos = pos;
         this.nodesNum = nodesNum;
+        this.commitURL = url + "/commit/" + currentCommit.toString().split(" ")[1];
+        this.fileModified = fileModified;
+        this.javaFileModified = javaFileModified;
+    }
+
+    public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos, int nodesNum, String url, int fileModified)
+    {
+        this.repo = repo;
+        this.currentCommit = currentCommit;
+        this.parentCommit = parentCommit;
+        this.diffEntry = diffEntry;
+        this.actionList = new ArrayList<>();
+        this.actionTypeBag = new ArrayList<>();
+        this.actionTypeMap = new HashMap<>();
+        this.cu = cu;
+        this.pos = pos;
+        this.nodesNum = nodesNum;
+        this.commitURL = url + "/commit/" + currentCommit.toString().split(" ")[1];
+        this.fileModified = fileModified;
     }
 }
