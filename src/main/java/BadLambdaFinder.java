@@ -24,6 +24,7 @@ import opennlp.tools.stemmer.PorterStemmer;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -61,6 +62,7 @@ public class BadLambdaFinder {
         if (repoPath == null) {
             repoPath = "repos/" + repoName;
         }
+        else repoPath = repoPath + "/" + repoName;
         if (!Files.exists(Paths.get(repoPath))) {
             System.err.printf("Cloning into %s...\n", repoPath);
             Git.cloneRepository().setProgressMonitor(new TextProgressMonitor(new PrintWriter(System.err))).setURI(url).setDirectory(new File(repoPath)).call();
@@ -74,7 +76,7 @@ public class BadLambdaFinder {
         this.keywords = keywords;
 
         //walk all commits from the head commit
-        walkAllCommits(repo, url);
+        walkAllCommits(repo, url, repoPath);
     }
 
     /*
@@ -132,7 +134,7 @@ public class BadLambdaFinder {
         String[] newFileContentLines = newFileContent.split("\n");
         for (Edit mergedEdit : mergedEditList)
         {
-            if (positionTuple.beginLine >= mergedEdit.getBeginA() + 1 && positionTuple.endLine <= mergedEdit.getEndA())
+            if (positionTuple.beginLine >= mergedEdit.getBeginA() + 1 && positionTuple.beginLine <= mergedEdit.getEndA())
             //A represents the information of the edit in the old file while B represents that in the new file
             //If the lambda is in the code snippet before the edit, we check whether it still exists in the snippet after the edit
             {
@@ -320,7 +322,8 @@ public class BadLambdaFinder {
                             boolean lambdaInLongDeletedCode = false;
                             for (Edit edit : editsLongerThanThresholdOrDeleted)
                             {
-                                if (positionTuple.beginLine >= edit.getBeginA() + 1 && positionTuple.endLine <= edit.getEndA())
+                                //Not sure about the second item. endline or beginline??
+                                if (positionTuple.beginLine >= edit.getBeginA() + 1 && positionTuple.beginLine <= edit.getEndA())
                                 {
                                     lambdaInLongDeletedCode = true;
                                     break;
@@ -340,10 +343,21 @@ public class BadLambdaFinder {
 
                                 int nodesNum = oldFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).get(0).getMetrics().size;
                                 assert url.endsWith(".git");
-                                ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver.cu, positionTuple, nodesNum, url.substring(0, url.lastIndexOf(".git")), fileModified, numOfJavaFiles(diffs));
+                                //Record the length of edit which hold this removed lambda
+                                int editBeginLine = 0, editEndLine = 0;
+                                for (Edit edit : mergedEdits)
+                                {
+                                    if (positionTuple.beginLine >= edit.getBeginA() + 1 && positionTuple.beginLine <= edit.getEndA())
+                                    {
+                                        editBeginLine = edit.getBeginA() + 1;
+                                        editEndLine = edit.getEndA();
+                                    }
+                                }
+                                ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver.cu, positionTuple,
+                                        nodesNum, url.substring(0, url.lastIndexOf(".git")), fileModified, numOfJavaFiles(diffs), editBeginLine, editEndLine);
+
                                 this.modifiedLambdas.add(newLambda);
                             }
-
                         }
 
                         oldFile.close();
@@ -364,16 +378,17 @@ public class BadLambdaFinder {
         });
     }
 
-    void walkAllCommits(Repository repo, String url) throws GitAPIException, IOException {
+    void walkAllCommits(Repository repo, String url, String repoPath) throws GitAPIException, IOException {
         String repoName = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf(".git"));
-        File branchRoot = new File("repos/" + repoName +"/.git/refs/heads");
+        File branchRoot = new File(repoPath +"/.git/refs/heads");
         //The default branch name of some projects are not "master", we can get the proper name in the "heads" directory
         File[] branch = branchRoot.listFiles();
         assert branch != null;
-        //System.out.println(branch[0].toString().split("\\\\")[5]);
+        System.out.println(branch[0].toString());
         assert Objects.requireNonNull(branch).length == 1;
         //String branch = "repos/" + repoName
-        Ref head = repo.exactRef("refs/heads/" + branch[0].toString().split("\\\\")[5]);
+        Ref head = repo.exactRef("refs/heads/" + branch[0].toString().split("\\\\")[7]);
+        //Ref head = repo.exactRef(branch[0].toString());
         RevWalk walk = new RevWalk(repo);
         RevCommit commit = walk.parseCommit(head.getObjectId());
         System.out.println("Start commit: " + commit);
@@ -711,6 +726,7 @@ public class BadLambdaFinder {
                 "apache/netbeans",
                 "apache/tomcat"
         };
+        String[] projectList_test = {"apache/skywalking"};
         String listPath = "oopsla_2017_list.txt";
         BufferedReader bf = new BufferedReader(new FileReader(listPath));
         String s = null;
@@ -719,8 +735,10 @@ public class BadLambdaFinder {
         {
             lines.add(s);
         }
-        String[] projectList = lines.toArray(new String[0]);
+        //String[] projectList = lines.toArray(new String[0]);
         bf.close();
+
+        String[] projectList = projectList_test;
 
         //Keywords below might not be used now, please ignore them......
         String[] keywords_lambda = {"lambda"};
@@ -730,7 +748,7 @@ public class BadLambdaFinder {
         String[] keywords_compatibility = {"compatible", "version", "jdk"};
         String[] keywords_concurrentMod = {"concurrent", "parallel", "race", "hang"};
         String[] keywords_flaky = {"flaky"};
-        String[] keywords = keywords_concurrentMod;
+        String[] keywords = null;
         //String[] keywords = {"overhead"};
 
 
@@ -752,7 +770,8 @@ public class BadLambdaFinder {
             String url = "https://github.com/" + project + ".git";
             String repoURL = url.substring(0, url.lastIndexOf(".git"));
             //GumtreeLambdaFilter filter = new GumtreeLambdaFilter(modifiedLambdas, url, null, 10);
-            BadLambdaFinder finder = new BadLambdaFinder(modifiedLambdas, url, null, 10, keywords);
+            String repoPath = "D:\\SEproject\\repos";
+            BadLambdaFinder finder = new BadLambdaFinder(modifiedLambdas, url, repoPath, 10, keywords);
             //remove repeated modified lambdas
             finder.reduceRepeatedLambdas(modifiedLambdas);
             System.err.println("project " + project + " mining completed!");

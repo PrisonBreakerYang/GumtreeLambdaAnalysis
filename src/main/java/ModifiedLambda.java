@@ -21,6 +21,7 @@ class SimplifiedModifiedLambda implements Serializable
     String parentCommit;
     String gitCommand;
     int javaFileModified;
+    int editBeginLine, editEndLine;
     public SimplifiedModifiedLambda(ModifiedLambda modifiedLambda)
     {
         this.repo = modifiedLambda.repo.toString();
@@ -37,6 +38,8 @@ class SimplifiedModifiedLambda implements Serializable
         this.gitCommand = "git diff " + modifiedLambda.parentCommit.toString().split(" ")[1] + " "
                 + modifiedLambda.currentCommit.toString().split(" ")[1] + " " + modifiedLambda.diffEntry.getNewPath();
         this.javaFileModified = modifiedLambda.javaFileModified;
+        this.editBeginLine = modifiedLambda.editBeginLine;
+        this.editEndLine = modifiedLambda.editEndLine;
     }
 }
 public class ModifiedLambda
@@ -64,12 +67,14 @@ public class ModifiedLambda
     int nodesNum;
     int fileModified;
     int javaFileModified;
+    int editBeginLine, editEndLine;
     List<String> actionTypeBag;
     Map<String, Integer> actionTypeMap;
     Set<String> actionTypeSet;
 
 
-    public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos, int nodesNum, String url, int fileModified, int javaFileModified)
+    public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos,
+                          int nodesNum, String url, int fileModified, int javaFileModified, int editBeginLine, int editEndLine)
     {
         this.repo = repo;
         this.currentCommit = currentCommit;
@@ -84,9 +89,12 @@ public class ModifiedLambda
         this.commitURL = url + "/commit/" + currentCommit.toString().split(" ")[1];
         this.fileModified = fileModified;
         this.javaFileModified = javaFileModified;
+        this.editBeginLine = editBeginLine;
+        this.editEndLine = editEndLine;
     }
 
-    public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos, int nodesNum, String url, int fileModified)
+    public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos,
+                          int nodesNum, String url, int fileModified)
     {
         this.repo = repo;
         this.currentCommit = currentCommit;

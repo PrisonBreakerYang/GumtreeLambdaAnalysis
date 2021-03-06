@@ -1,3 +1,13 @@
+import com.github.gumtreediff.actions.EditScript;
+import com.github.gumtreediff.actions.EditScriptGenerator;
+import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
+import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.client.Run;
+import com.github.gumtreediff.gen.TreeGenerators;
+import com.github.gumtreediff.matchers.MappingStore;
+import com.github.gumtreediff.matchers.Matcher;
+import com.github.gumtreediff.matchers.Matchers;
+import com.github.gumtreediff.tree.Tree;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.*;
@@ -287,7 +297,7 @@ class LambdaFilter
 
 public class Test
 {
-    public static void main1(String[] args) throws IOException, GitAPIException, ClassNotFoundException {
+    public static void main1(String[] args) throws IOException, ClassNotFoundException {
         List<SimplifiedModifiedLambda> simplifiedModifiedLambdaList = new ArrayList<>();
         //FileInputStream fileIn = new FileInputStream("ser/01-31-11-43/rabbitmq rabbitmq-jms-client.ser");
 //        ObjectInputStream in = new ObjectInputStream(fileIn);
@@ -306,10 +316,10 @@ public class Test
         String[] keywords_flaky = {"flaky"};
 
         //String[] keywords = keywords_concurrentMod;
-        String[] keywords = {"overhead"};
-        File writeFile = new File("statistics/" + Arrays.toString(keywords) + ".csv");
+        String[] keywords = null;
+        File writeFile = new File("statistics/" + "lambda-abuse/test/"+ Arrays.toString(keywords) + ".csv");
         try {
-            String[] paths = {"ser/02-07"};
+            String[] paths = {"ser/03-06"};
             for (String path : paths)
             {
                 File file = new File(path);
@@ -319,6 +329,7 @@ public class Test
                 {
                     if (serFile.toString().endsWith(Arrays.toString(keywords) + ".ser"))
                     {
+                        //System.out.println("line 332");
                         FileInputStream fileIn = new FileInputStream(serFile);
                         ObjectInputStream in = new ObjectInputStream(fileIn);
                         SimplifiedModifiedLambda[] simplifiedModifiedLambdas = (SimplifiedModifiedLambda[]) in.readObject();
@@ -328,7 +339,7 @@ public class Test
             }
             BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
             //writer.newLine();
-            writer.write("seq,project,file path,file name,line number,modified java files,git command, commit link");
+            writer.write("seq,project,file path,file name,lambda line number,edit line number,modified java files,git command, commit link");
             int seq = 1;
             for (SimplifiedModifiedLambda simplifiedModifiedLambda : simplifiedModifiedLambdaList)
             {
@@ -336,7 +347,8 @@ public class Test
                 int temp = simplifiedModifiedLambda.filePath.split("/").length;
                 writer.write(seq + "," + simplifiedModifiedLambda.commitURL.replace("https://github.com/", "").split("/commit")[0]
                         + "," + simplifiedModifiedLambda.filePath + "," + simplifiedModifiedLambda.filePath.split("/")[temp - 1] + ","
-                + "L" + simplifiedModifiedLambda.beginLine + "-" + "L" + simplifiedModifiedLambda.endLine + "," + simplifiedModifiedLambda.javaFileModified
+                + "L" + simplifiedModifiedLambda.beginLine + "-" + "L" + simplifiedModifiedLambda.endLine + ","
+                + "L" + simplifiedModifiedLambda.editBeginLine + "-" + "L" + simplifiedModifiedLambda.editEndLine + "," + simplifiedModifiedLambda.javaFileModified
                 + "," + simplifiedModifiedLambda.gitCommand  + "," + simplifiedModifiedLambda.commitURL);
                 seq += 1;
             }
@@ -345,6 +357,7 @@ public class Test
         }catch (FileNotFoundException e)
         {
             System.err.println("can't find the file");
+            e.printStackTrace();
         }
     }
     public static void main2(String[] args) throws IOException, GitAPIException {
@@ -371,7 +384,23 @@ public class Test
             }
         }
     }
-    public static void main(String[] args) throws IOException, GitAPIException {
-        Test.main3(null);
+    public static void main4(String[] args) throws IOException {
+        Run.initGenerators(); // registers the available parsers
+        String srcFile = "C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\ZipkinTracer_old.java";
+        String dstFile = "C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\ZipkinTracer_new.java";
+        Tree src = TreeGenerators.getInstance().getTree(srcFile).getRoot(); // retrieves and applies the default parser for the file
+        Tree dst = TreeGenerators.getInstance().getTree(dstFile).getRoot(); // retrieves and applies the default parser for the file
+        Matcher defaultMatcher = Matchers.getInstance().getMatcher(); // retrieves the default matcher
+        MappingStore mappings = defaultMatcher.match(src, dst); // computes the mappings between the trees
+        EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator(); // instantiates the simplified Chawathe script generator
+        EditScript actions = editScriptGenerator.computeActions(mappings); // computes the edit script
+        for (Action action : actions)
+        {
+            System.out.println(action);
+        }
+    }
+
+    public static void main(String[] args) throws IOException, GitAPIException, ClassNotFoundException {
+        Test.main1(null);
     }
 }
