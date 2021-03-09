@@ -61,6 +61,7 @@ public class GumtreeJDTDriver
         cu = (CompilationUnit) parser.createAST(null);
     }
 
+    @Deprecated
     private class LambdaFinder extends ASTVisitor
     {
         // is code snippet which overlaps [startLine, endLine] related to lambda expression
@@ -101,9 +102,10 @@ public class GumtreeJDTDriver
             }
             isRelatedToLambda = true;
             //此处不确定要不要取上一层
-            PositionTuple newPositionTuple = new PositionTuple(parent.getStartPosition(), parent.getStartPosition() + parent.getLength(),
+            PositionTuple newParentPositionTuple = new PositionTuple(parent.getStartPosition(), parent.getStartPosition() + parent.getLength(),
                     cu.getLineNumber(parent.getStartPosition()), cu.getLineNumber(parent.getStartPosition() + parent.getLength()));
-            //PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength());
+            PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength(),
+                    cu.getLineNumber(node.getStartPosition()), cu.getLineNumber(node.getStartPosition() + node.getLength()));
             GumtreeJDTDriver.this.positionTupleList.add(newPositionTuple);
 
             return true;
@@ -123,7 +125,6 @@ public class GumtreeJDTDriver
             cu = compilationUnit;
             this.startLine = startLine;
             this.endLine = endLine;
-
         }
 
         public boolean visit(LambdaExpression node)

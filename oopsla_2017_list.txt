@@ -1,0 +1,10 @@
+apache/geode
+goldmansachs/gs-collections
+elastic/elasticsearch
+eclipse-vertx/vert.x
+asciidocfx/AsciidocFX
+neo4j/neo4j
+vavr-io/vavr
+prestodb/presto
+JetBrains/intellij-plugins
+speedment/speedment

@@ -12,6 +12,7 @@ class SimplifiedModifiedLambda implements Serializable
     String commitURL;
     String filePath;
     String node;
+    String parentNode;
     int beginLine;
     int endLine;
     int nodesNum;
@@ -22,12 +23,15 @@ class SimplifiedModifiedLambda implements Serializable
     String gitCommand;
     int javaFileModified;
     int editBeginLine, editEndLine;
+    String lambdaContext;
+
     public SimplifiedModifiedLambda(ModifiedLambda modifiedLambda)
     {
         this.repo = modifiedLambda.repo.toString();
         this.commitURL = modifiedLambda.commitURL;
         this.filePath = modifiedLambda.diffEntry.getNewPath();
         this.node = modifiedLambda.pos.node.toString();
+        this.parentNode = modifiedLambda.pos.node.getParent().toString();
         this.beginLine = modifiedLambda.pos.beginLine;
         this.endLine = modifiedLambda.pos.endLine;
         this.nodesNum = modifiedLambda.nodesNum;
@@ -40,6 +44,7 @@ class SimplifiedModifiedLambda implements Serializable
         this.javaFileModified = modifiedLambda.javaFileModified;
         this.editBeginLine = modifiedLambda.editBeginLine;
         this.editEndLine = modifiedLambda.editEndLine;
+        this.lambdaContext = modifiedLambda.lambdaContext;
     }
 }
 public class ModifiedLambda
@@ -71,10 +76,10 @@ public class ModifiedLambda
     List<String> actionTypeBag;
     Map<String, Integer> actionTypeMap;
     Set<String> actionTypeSet;
-
+    String lambdaContext;
 
     public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos,
-                          int nodesNum, String url, int fileModified, int javaFileModified, int editBeginLine, int editEndLine)
+                          int nodesNum, String url, int fileModified, int javaFileModified, int editBeginLine, int editEndLine, String lambdaContext)
     {
         this.repo = repo;
         this.currentCommit = currentCommit;
@@ -91,8 +96,10 @@ public class ModifiedLambda
         this.javaFileModified = javaFileModified;
         this.editBeginLine = editBeginLine;
         this.editEndLine = editEndLine;
+        this.lambdaContext = lambdaContext;
     }
 
+    @Deprecated
     public ModifiedLambda(Repository repo, RevCommit currentCommit, RevCommit parentCommit, DiffEntry diffEntry, CompilationUnit cu, PositionTuple pos,
                           int nodesNum, String url, int fileModified)
     {

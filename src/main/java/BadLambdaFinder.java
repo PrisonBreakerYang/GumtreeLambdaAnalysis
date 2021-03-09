@@ -18,6 +18,7 @@ import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import opennlp.tools.stemmer.PorterStemmer;
@@ -38,6 +39,7 @@ public class BadLambdaFinder {
     private final String url;
     private final Stemmer stemmer;
     private final int threshold;
+    int context;
     List<ModifiedLambda> modifiedLambdas;
     String[] keywords;
     public BadLambdaFinder()
@@ -50,17 +52,17 @@ public class BadLambdaFinder {
         this.keywords = null;
     }
 
-    public BadLambdaFinder(List<ModifiedLambda> modifiedLambdas, String url, String repoPath, int editThreshold, String[] keywords) throws IOException, GitAPIException {
+    public BadLambdaFinder(List<ModifiedLambda> modifiedLambdas, String url, String repoPath, int editThreshold, String[] keywords, int context) throws IOException, GitAPIException {
         assert url.endsWith(".git");
         //"/repos" is the path that stores all downloaded GitHub projects(by git clone)
-        if (!Files.exists(Paths.get("repos"))) {
-            new File("repos").mkdirs();
+        if (!Files.exists(Paths.get("../repos"))) {
+            new File("../repos").mkdirs();
         }
 
         String repoName = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf(".git"));
         //String ownerName = url.split("[/ : . # %]")[5];
         if (repoPath == null) {
-            repoPath = "repos/" + repoName;
+            repoPath = "../repos/" + repoName;
         }
         else repoPath = repoPath + "/" + repoName;
         if (!Files.exists(Paths.get(repoPath))) {
@@ -74,6 +76,7 @@ public class BadLambdaFinder {
         stemmer = new Stemmer();
         threshold = editThreshold;
         this.keywords = keywords;
+        this.context = context;
 
         //walk all commits from the head commit
         walkAllCommits(repo, url, repoPath);
@@ -152,13 +155,22 @@ public class BadLambdaFinder {
         return true;
     }
 
-    boolean lambdaInEdits(PositionTuple positionTuple, List<Edit> mergedEditList)
+    static boolean lambdaInEdits(PositionTuple positionTuple, List<Edit> mergedEditList, String AorB)
     {
-        for (Edit mergedEdit : mergedEditList)
+        if (AorB.equals("A"))
         {
-            if (positionTuple.beginLine >= mergedEdit.getBeginA() + 1 && positionTuple.beginLine <= mergedEdit.getEndA())
-            {
-                return true;
+            for (Edit mergedEdit : mergedEditList) {
+                if (positionTuple.beginLine >= mergedEdit.getBeginA() + 1 && positionTuple.beginLine <= mergedEdit.getEndA()) {
+                    return true;
+                }
+            }
+        }
+        if (AorB.equals("B"))
+        {
+            for (Edit mergedEdit : mergedEditList) {
+                if (positionTuple.beginLine >= mergedEdit.getBeginB() + 1 && positionTuple.beginLine <= mergedEdit.getEndB()) {
+                    return true;
+                }
             }
         }
         return false;
@@ -186,7 +198,7 @@ public class BadLambdaFinder {
     //This function is based on the Gumtree diff tool
     //https://github.com/GumTreeDiff/gumtree
     //A probably useful blog: https://hoblovski.github.io/2018/05/31/GumTree.html
-    void gumTreeDiffBetweenParent(RevCommit currentCommit, RevCommit parentCommit, String url) throws IOException {
+    void gumTreeDiffWithParent(RevCommit currentCommit, RevCommit parentCommit, String url) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         DiffFormatter formatter = new DiffFormatter(outputStream);
         formatter.setRepository(repo);
@@ -201,10 +213,9 @@ public class BadLambdaFinder {
         diffs.forEach(diff ->
         {
             //We only focus on modified java files
-            if (diff.getChangeType() == DiffEntry.ChangeType.DELETE || diff.getChangeType() == DiffEntry.ChangeType.ADD
-                    || ((diff.getChangeType() == DiffEntry.ChangeType.RENAME) && (!diff.getOldPath().equals(diff.getNewPath())))) {
-                return;
-            }
+            if (diff.getChangeType() == DiffEntry.ChangeType.DELETE
+             || diff.getChangeType() == DiffEntry.ChangeType.ADD) return;
+
             try {
                 boolean isJavaFile = false;
                 FileHeader fileHeader = formatter.toFileHeader(diff);
@@ -220,7 +231,7 @@ public class BadLambdaFinder {
                 formatter.setContext(0);    //set the context lines to be 0
                 formatter.format(diff);
                 String content = outputStream.toString();
-                //If the old java file even doesn't have a lambda expression, pass
+                //If the diff file even doesn't have a lambda expression, pass
                 if (!content.contains("->")) {
                     return;
                 }
@@ -240,7 +251,7 @@ public class BadLambdaFinder {
                     //List<PositionTuple> positionTupleList_new = new ArrayList<>();
                     GumtreeJDTDriver gumtreeJDTDriver = new GumtreeJDTDriver(new String(fileContentBeforeCommit.getBytes()), positionTupleList, true);
                     //GumtreeJDTDriver gumtreeJDTDriver_new = new GumtreeJDTDriver(new String(fileContentAfterCommit.getBytes()), positionTupleList_new, true);
-                    List<Edit> editsLongerThanThresholdOrDeleted = new ArrayList<>();
+                    List<Edit> editsLongerThanThreshold = new ArrayList<>();
                     List<Edit> editsDeletedOrReplaced = new ArrayList<>();
                     List<Edit> mergedEdits;
                     for (HunkHeader hunk : fileHeader.getHunks())
@@ -268,28 +279,29 @@ public class BadLambdaFinder {
                         //If the removed lambda is in a big edit (with edit lines more than threshold, e.g. 5)
                         if (mergedEdit.getEndA() - mergedEdit.getBeginA() > threshold)
                         {
-                            editsLongerThanThresholdOrDeleted.add(mergedEdit);
+                            editsLongerThanThreshold.add(mergedEdit);
                         }
                     }
 
                     //Maybe the following for loop can be deleted......
-                    for (HunkHeader hunk : fileHeader.getHunks())
-                    {
-                        for (Edit edit : hunk.toEditList())
-                        {
-                            if (edit.getType() == Edit.Type.DELETE)
-                            {
-                                editsLongerThanThresholdOrDeleted.add(edit);
-                            }
-                        }
-                    }
+//                    for (HunkHeader hunk : fileHeader.getHunks())
+//                    {
+//                        for (Edit edit : hunk.toEditList())
+//                        {
+//                            if (edit.getType() == Edit.Type.DELETE)
+//                            {
+//                                editsLongerThanThresholdOrDeleted.add(edit);
+//                            }
+//                        }
+//                    }
 
                     FileWriter oldFile, newFile;
                     try {
                         //Cache target file in local file directory, maybe it's not so necessary......
                         oldFile = new FileWriter("old-new-file\\oldfile.java");
                         oldFile.write("");
-                        oldFile.write(new String(fileContentBeforeCommit.getBytes()));
+                        String oldFileContent = new String(fileContentBeforeCommit.getBytes());
+                        oldFile.write(oldFileContent);
                         oldFile.flush();
 
                         newFile = new FileWriter("old-new-file\\newfile.java");
@@ -302,7 +314,6 @@ public class BadLambdaFinder {
 
                         Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
                         Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
-
 
                         //Diff information is stored in the variable "mappings"
                         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
@@ -320,7 +331,7 @@ public class BadLambdaFinder {
                         for (PositionTuple positionTuple : positionTupleList)
                         {
                             boolean lambdaInLongDeletedCode = false;
-                            for (Edit edit : editsLongerThanThresholdOrDeleted)
+                            for (Edit edit : editsLongerThanThreshold)
                             {
                                 //Not sure about the second item. endline or beginline??
                                 if (positionTuple.beginLine >= edit.getBeginA() + 1 && positionTuple.beginLine <= edit.getEndA())
@@ -337,7 +348,7 @@ public class BadLambdaFinder {
 
                             if (mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).get(0)) == null
                             && isLambdaReallyRemoved(positionTuple, mergedEdits, currentCommit, diff.getNewPath())
-                            && lambdaInEdits(positionTuple, mergedEdits))
+                            && lambdaInEdits(positionTuple, mergedEdits, "A"))
                             {
                                 //表示commit前文件的lambda在commit后文件中找不到
 
@@ -354,7 +365,8 @@ public class BadLambdaFinder {
                                     }
                                 }
                                 ModifiedLambda newLambda = new ModifiedLambda(repo, currentCommit, parentCommit, diff, gumtreeJDTDriver.cu, positionTuple,
-                                        nodesNum, url.substring(0, url.lastIndexOf(".git")), fileModified, numOfJavaFiles(diffs), editBeginLine, editEndLine);
+                                        nodesNum, url.substring(0, url.lastIndexOf(".git")), fileModified, numOfJavaFiles(diffs), editBeginLine, editEndLine,
+                                        lambda_context(oldFileContent, positionTuple.beginLine, positionTuple.endLine, this.context));
 
                                 this.modifiedLambdas.add(newLambda);
                             }
@@ -363,46 +375,62 @@ public class BadLambdaFinder {
                         oldFile.close();
                         newFile.close();
                     } catch (SyntaxException e) {
-                        return;
                         //e.printStackTrace();
                     }
                 }
-                if (fileContentBeforeCommit == null) {
-                    return;
-                }
+//                if (fileContentBeforeCommit == null) {
+//                    return;
+//                }
 
-                return;
             } catch (IOException e) {
                 e.printStackTrace();
             }
         });
     }
+    static String lambda_context(String fileContent, int lambdaBeginLine, int lambdaEndLine, int context)
+    {
+        String[] lines = fileContent.split("\n");
+        int beginLine = Math.max(1, lambdaBeginLine - context);
+        int endLine = Math.min(lines.length, lambdaEndLine + context);
+        StringBuilder lambdaWithContext = new StringBuilder();
+        for (int i = beginLine; i <= endLine; i++)
+        {
+            lambdaWithContext.append(lines[i - 1]);
+            lambdaWithContext.append("\n");
+        }
+        return lambdaWithContext.toString();
+    }
 
     void walkAllCommits(Repository repo, String url, String repoPath) throws GitAPIException, IOException {
-        String repoName = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf(".git"));
-        File branchRoot = new File(repoPath +"/.git/refs/heads");
-        //The default branch name of some projects are not "master", we can get the proper name in the "heads" directory
-        File[] branch = branchRoot.listFiles();
-        assert branch != null;
-        System.out.println(branch[0].toString());
-        assert Objects.requireNonNull(branch).length == 1;
+//        String repoName = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf(".git"));
+//        File branchRoot = new File(repoPath +"/.git/refs/heads");
+//        //The default branch name of some projects are not "master", we can get the proper name in the "heads" directory
+//        //To improve: https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/porcelain/ListBranches.java
+//        File[] branch = branchRoot.listFiles();
+//        assert branch != null;
+//        System.out.println(branch[0].toString());
+//        assert Objects.requireNonNull(branch).length == 1;
         //String branch = "repos/" + repoName
-        Ref head = repo.exactRef("refs/heads/" + branch[0].toString().split("\\\\")[7]);
-        //Ref head = repo.exactRef(branch[0].toString());
+        //Ref head = repo.exactRef("refs/heads/" + branch[0].toString().split("\\\\")[7]);
+        List<Ref> call = git.branchList().call();
+        Ref head= call.get(0);
+        System.out.println(head);
+        assert call.size() == 1;
         RevWalk walk = new RevWalk(repo);
         RevCommit commit = walk.parseCommit(head.getObjectId());
         System.out.println("Start commit: " + commit);
-
         System.out.println("Walking all commits starting at HEAD");
         walk.markStart(commit);
+        walk.setRevFilter(RevFilter.NO_MERGES);
         int count = 0;
         for (RevCommit currentCommit : walk) {
             if (currentCommit.getParentCount() == 0) {
                 // this is the initial commit of the repo
                 break;
             } else {
+                //if (currentCommit.getParents().length > 1) System.out.println(currentCommit.getParents().length + "\n" + currentCommit.getName());
                 for (RevCommit parentCommit : currentCommit.getParents()) {
-                    gumTreeDiffBetweenParent(currentCommit, parentCommit, url);
+                    gumTreeDiffWithParent(currentCommit, parentCommit, url);
                 }
             }
 
@@ -477,6 +505,7 @@ public class BadLambdaFinder {
 
     }
     //This function is not used currently, because we are not filtering commit message now
+    @Deprecated
     public boolean commitRelatedToKeywords(ModifiedLambda lambda, String[] keywords)
     {
         RevCommit commit = lambda.currentCommit;
@@ -499,6 +528,7 @@ public class BadLambdaFinder {
         return false;
     }
     //This function is not used currently, because we are not filtering commit message now
+    @Deprecated
     public boolean commitRelatedToKeywords(RevCommit commit, String[] keywords)
     {
         if (keywords == null)
@@ -527,9 +557,11 @@ public class BadLambdaFinder {
     {
 
     }
+
     //This function tackles the problem of repeated lambda. Some commits have different commit
     // hash but their content is exactly the same, so a removed lambda may appear multiple times
     //and should be reduced to one commit
+    @Deprecated
     public void reduceRepeatedLambdas(List<ModifiedLambda> modifiedLambdas)
     {
         List<ModifiedLambda> reducedModifiedLambdaList = new ArrayList<>();
@@ -619,7 +651,7 @@ public class BadLambdaFinder {
                 String url = "https://github.com/" + project + ".git";
                 String repoURL = url.substring(0, url.lastIndexOf(".git"));
                 //GumtreeLambdaFilter filter = new GumtreeLambdaFilter(modifiedLambdas, url, null, 10);
-                BadLambdaFinder finder = new BadLambdaFinder(modifiedLambdas, url, null, 10, keywords);
+                BadLambdaFinder finder = new BadLambdaFinder(modifiedLambdas, url, null, 10, keywords, 10);
                 //remove repeated modified lambdas
                 finder.reduceRepeatedLambdas(modifiedLambdas);
                 System.err.println("project " + project + " mining completed!");
@@ -728,6 +760,7 @@ public class BadLambdaFinder {
         };
         String[] projectList_test = {"apache/skywalking"};
         String listPath = "oopsla_2017_list.txt";
+        String repoPath = "../repos";
         BufferedReader bf = new BufferedReader(new FileReader(listPath));
         String s = null;
         List<String> lines = new ArrayList<>();
@@ -770,10 +803,10 @@ public class BadLambdaFinder {
             String url = "https://github.com/" + project + ".git";
             String repoURL = url.substring(0, url.lastIndexOf(".git"));
             //GumtreeLambdaFilter filter = new GumtreeLambdaFilter(modifiedLambdas, url, null, 10);
-            String repoPath = "D:\\SEproject\\repos";
-            BadLambdaFinder finder = new BadLambdaFinder(modifiedLambdas, url, repoPath, 10, keywords);
+
+            BadLambdaFinder finder = new BadLambdaFinder(modifiedLambdas, url, repoPath, 10, keywords, 10);
             //remove repeated modified lambdas
-            finder.reduceRepeatedLambdas(modifiedLambdas);
+            //finder.reduceRepeatedLambdas(modifiedLambdas);
             System.err.println("project " + project + " mining completed!");
             System.err.println("size of lambda list of " + project + ": " + modifiedLambdas.size());
             List<SimplifiedModifiedLambda> simplifiedModifiedLambdas = new ArrayList<>();
@@ -790,12 +823,12 @@ public class BadLambdaFinder {
             }
             //System.out.println(project.replace("/", " "));
 
-            FileOutputStream fileOut = new FileOutputStream("ser/" + ft.format(date) + "/" + project.replace("/", " ") + "-" + Arrays.toString(keywords) + ".ser");
+            FileOutputStream fileOut = new FileOutputStream("ser/" + ft.format(date) + "/" + project.replace("/", " ") + "-" + "revfilter-not-reduced" + ".ser");
             ObjectOutputStream serOut = new ObjectOutputStream(fileOut);
             serOut.writeObject(modifiedLambdasForSerial);
             serOut.close();
             fileOut.close();
-            System.err.println("Serialized data is saved in ser/" + ft.format(date) + "/" + project.replace("/", " ") + "-" + Arrays.toString(keywords) + ".ser");
+            System.err.println("Serialized data is saved in ser/" + ft.format(date) + "/" + project.replace("/", " ") + "-" + "revfilter" + ".ser");
         }
     }
 }

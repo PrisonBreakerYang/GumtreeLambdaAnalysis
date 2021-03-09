@@ -317,9 +317,9 @@ public class Test
 
         //String[] keywords = keywords_concurrentMod;
         String[] keywords = null;
-        File writeFile = new File("statistics/" + "lambda-abuse/test/"+ Arrays.toString(keywords) + ".csv");
+        File writeFile = new File("statistics/" + "lambda-abuse/test/ambari-"+ Arrays.toString(keywords) + ".csv");
         try {
-            String[] paths = {"ser/03-06"};
+            String[] paths = {"ser/03-07"};
             for (String path : paths)
             {
                 File file = new File(path);
