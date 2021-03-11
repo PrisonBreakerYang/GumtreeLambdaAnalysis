@@ -46,7 +46,7 @@ class LambdaFilter
     private final Repository repo;
     private final Git git;
     private final String url;
-    private final Stemmer stemmer;
+    //private final Stemmer stemmer;
     private final int threshold;
 
     private static AbstractTreeIterator prepareTreeParser(Repository repository, String objectId) throws IOException {
@@ -163,7 +163,7 @@ class LambdaFilter
         repo = new FileRepositoryBuilder().setGitDir(new File(repoPath + "/.git")).build();
         git = new Git(repo);
         this.url = url;
-        stemmer = new Stemmer();
+        //stemmer = new Stemmer();
         threshold = editThreshold;
     }
 

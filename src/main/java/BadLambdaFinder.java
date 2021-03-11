@@ -37,7 +37,7 @@ public class BadLambdaFinder {
     private final Repository repo;
     private final Git git;
     private final String url;
-    private final Stemmer stemmer;
+    //private final Stemmer stemmer;
     private final int threshold;
     int context;
     List<ModifiedLambda> modifiedLambdas;
@@ -47,7 +47,7 @@ public class BadLambdaFinder {
         this.repo = null;
         this.git = null;
         this.url = null;
-        this.stemmer = null;
+        //this.stemmer = null;
         this.threshold = 0;
         this.keywords = null;
     }
@@ -73,7 +73,7 @@ public class BadLambdaFinder {
         git = new Git(repo);
         this.url = url;
         this.modifiedLambdas = modifiedLambdas;
-        stemmer = new Stemmer();
+        //stemmer = new Stemmer();
         threshold = editThreshold;
         this.keywords = keywords;
         this.context = context;
@@ -506,29 +506,29 @@ public class BadLambdaFinder {
     }
     //This function is not used currently, because we are not filtering commit message now
     @Deprecated
-    public boolean commitRelatedToKeywords(ModifiedLambda lambda, String[] keywords)
-    {
-        RevCommit commit = lambda.currentCommit;
-        String message = commit.getFullMessage().toLowerCase();
-        stemmer.add(message.toCharArray(), message.length());
-        stemmer.stem();
-        String stemMsg = stemmer.toString();
-        String[] tokens = stemMsg.split("\\W+");
-
-        for (String keyword : keywords)
-        {
-            for (String token : tokens)
-            {
-                if (token.equals(keyword))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+//    public boolean commitRelatedToKeywords(ModifiedLambda lambda, String[] keywords)
+//    {
+//        RevCommit commit = lambda.currentCommit;
+//        String message = commit.getFullMessage().toLowerCase();
+//        stemmer.add(message.toCharArray(), message.length());
+//        stemmer.stem();
+//        String stemMsg = stemmer.toString();
+//        String[] tokens = stemMsg.split("\\W+");
+//
+//        for (String keyword : keywords)
+//        {
+//            for (String token : tokens)
+//            {
+//                if (token.equals(keyword))
+//                {
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+//    }
     //This function is not used currently, because we are not filtering commit message now
-    @Deprecated
+
     public boolean commitRelatedToKeywords(RevCommit commit, String[] keywords)
     {
         if (keywords == null)
