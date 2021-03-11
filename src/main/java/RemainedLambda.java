@@ -28,7 +28,7 @@ public class RemainedLambda implements Serializable
     boolean introducedWhenTheFileCreated;
 
     public RemainedLambda(Repository repo, RevCommit introducedCommit, String url, String filePath, PositionTuple positionTuple,
-              String lambdaContext, boolean introducedWhenTheFileCreated)
+              String lambdaContext, String NLaterCommitHash, boolean introducedWhenTheFileCreated)
     {
         this.repo = repo.toString();
         this.commitURL = url.replace(".git", "") + "/commit/" + introducedCommit.getName();
@@ -43,6 +43,8 @@ public class RemainedLambda implements Serializable
         this.introducedCommit = introducedCommit.toString();
         this.gitCommand = "git log --pretty=format:%h%x09%an%x09%ad%x09%s " + filePath;
         this.lambdaContext = lambdaContext;
+        this.introducedCommitHash = introducedCommit.getName();
+        this.NLaterCommitHash = NLaterCommitHash;
         this.introducedWhenTheFileCreated = introducedWhenTheFileCreated;
     }
 
@@ -51,20 +53,20 @@ public class RemainedLambda implements Serializable
         String[] projectList_test = {"apache skywalking"};
         //String[] projectList = lines.toArray(new String[0]);
         String[] projectList = projectList_test;
-        String readPath = "statistics/" + "lambda-right-use/test/";
+        String writePath = "statistics/" + "lambda-right-use/test/";
         String serPath = "ser/good-lambdas/test/";
-        File writeFile = new File( readPath + Arrays.toString(projectList) + "-new-with-edit.csv");
+        File writeFile = new File( writePath + Arrays.toString(projectList) + "compareNonebyone-new-new.csv");
         List<RemainedLambda> remainedLambdaList = new ArrayList<>();
         try {
-            String[] writePath = {serPath + "03-09"};
-            for (String path : writePath)
+            String[] readPath = {serPath + "03-11"};
+            for (String path : readPath)
             {
                 File file = new File(path);
                 File[] fileList = file.listFiles();
                 assert fileList != null;
                 for (File serFile : fileList)
                 {
-                    //if (!serFile.toString().endsWith())
+                    if (!serFile.toString().endsWith("apache skywalkingN=10.ser")) continue;
                     FileInputStream fileIn = new FileInputStream(serFile);
                     ObjectInputStream in = new ObjectInputStream(fileIn);
                     RemainedLambda[] remainedLambdaArray = (RemainedLambda[]) in.readObject();

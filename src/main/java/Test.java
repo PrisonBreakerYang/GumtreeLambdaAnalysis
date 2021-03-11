@@ -399,8 +399,14 @@ public class Test
             System.out.println(action);
         }
     }
+    public static void test() throws IOException {
+        Run.initGenerators();
+        Tree fileTree = TreeGenerators.getInstance().getTree("test-java-file/CoreModuleProvider.java").getRoot();
+
+        System.out.println(fileTree.toTreeString());
+    }
 
     public static void main(String[] args) throws IOException, GitAPIException, ClassNotFoundException {
-        Test.main1(null);
+        Test.test();
     }
 }

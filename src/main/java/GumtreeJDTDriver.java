@@ -20,7 +20,7 @@ public class GumtreeJDTDriver
 {
     ASTParser parser;
     CompilationUnit cu;
-    public List<PositionTuple> positionTupleList;
+
     public GumtreeJDTDriver(String sourceCode)
     {
         //for commits_after
@@ -35,7 +35,6 @@ public class GumtreeJDTDriver
 
     public GumtreeJDTDriver(String sourceCode, List<PositionTuple> positionTupleList, boolean findBadLambda)
     {
-        this.positionTupleList = positionTupleList;
         parser = ASTParser.newParser(AST.JLS14);
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
         Map<String, String> options = JavaCore.getDefaultOptions();
@@ -45,7 +44,7 @@ public class GumtreeJDTDriver
         setSourceCode(sourceCode);
         if (findBadLambda)
         {
-            BadLambdaFinder badLambdaFinder = new BadLambdaFinder(cu, 0, Integer.MAX_VALUE);
+            BadLambdaFinder badLambdaFinder = new BadLambdaFinder(cu, 0, Integer.MAX_VALUE, positionTupleList);
             cu.accept(badLambdaFinder);
         }
         else {
@@ -106,7 +105,7 @@ public class GumtreeJDTDriver
                     cu.getLineNumber(parent.getStartPosition()), cu.getLineNumber(parent.getStartPosition() + parent.getLength()));
             PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength(),
                     cu.getLineNumber(node.getStartPosition()), cu.getLineNumber(node.getStartPosition() + node.getLength()));
-            GumtreeJDTDriver.this.positionTupleList.add(newPositionTuple);
+            positionTupleList.add(newPositionTuple);
 
             return true;
         }
@@ -120,11 +119,12 @@ public class GumtreeJDTDriver
         private final int startLine, endLine;
         public List<PositionTuple> positionTupleList;
 
-        private BadLambdaFinder(CompilationUnit compilationUnit, int startLine, int endLine)
+        private BadLambdaFinder(CompilationUnit compilationUnit, int startLine, int endLine, List<PositionTuple> positionTupleList)
         {
             cu = compilationUnit;
             this.startLine = startLine;
             this.endLine = endLine;
+            this.positionTupleList = positionTupleList;
         }
 
         public boolean visit(LambdaExpression node)
@@ -154,51 +154,13 @@ public class GumtreeJDTDriver
             PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength(),
                     cu.getLineNumber(node.getStartPosition()), cu.getLineNumber(node.getStartPosition() + node.getLength()), node);
             //PositionTuple newPositionTuple = new PositionTuple(node.getStartPosition(), node.getStartPosition() + node.getLength());
-            GumtreeJDTDriver.this.positionTupleList.add(newPositionTuple);
+            this.positionTupleList.add(newPositionTuple);
 
             return true;
         }
     }
     public static void main(String[] args) throws IOException
     {
-        //this is an example of using gumtree API to obtain actions from a diff
-        Run.initGenerators();
-        Tree oldFileTree = TreeGenerators.getInstance().getTree("example\\lc01.java").getRoot();
-        Tree newFileTree = TreeGenerators.getInstance().getTree("example\\lc02.java").getRoot();
-        Matcher defaultMatcher = Matchers.getInstance().getMatcher();
-        MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
-        EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator();
-        EditScript actions = editScriptGenerator.computeActions(mappings);
-        Map<String, Integer> actionTypeDict = new HashMap<>();
-//        for (String actionType : modifiedLambda.actionTypeBag)
-//        {
-//            if (!modifiedLambda.actionTypeDict.containsKey(actionType))
-//            {
-//                modifiedLambda.actionTypeDict.put(actionType, 1);
-//            }
-//            if (modifiedLambda.actionTypeDict.containsKey(actionType))
-//            {
-//                Integer value = modifiedLambda.actionTypeDict.get(actionType) + 1;
-//                modifiedLambda.actionTypeDict.put(actionType, value);
-//            }
-//        }
-        for (Action action : actions) {
-            if (!actionTypeDict.containsKey(action.getName()))
-            {
-                actionTypeDict.put(action.getName(), 1);
-            }
-            else
-            {
-                Integer value = actionTypeDict.get(action.getName()) + 1;
-                actionTypeDict.put(action.getName(), value);
-            }
-            System.out.println(action.getName().split("-")[0]);
-            //System.out.println(action.getNode());
-            //System.out.println(action.getNode().toTreeString());
-            System.out.println(action.getNode());
-            System.out.println(action.getNode().getMetrics().size);
-            System.out.println(action.getNode().getLength());
-        }
-        System.out.println(actionTypeDict);
+
     }
 }

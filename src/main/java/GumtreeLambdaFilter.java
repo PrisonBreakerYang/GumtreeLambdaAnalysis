@@ -492,8 +492,8 @@ public class GumtreeLambdaFilter {
                     }
                 }
                 System.err.println("project " + project + " mining completed!");
-                Pattern pattern = new Pattern(modifiedLambdas);
-                pattern.statisticsToCsv();
+//                Pattern pattern = new Pattern(modifiedLambdas);
+//                pattern.statisticsToCsv();
 
             }
             System.setOut(out);

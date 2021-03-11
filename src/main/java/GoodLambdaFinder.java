@@ -30,6 +30,15 @@ import org.eclipse.jgit.treewalk.filter.TreeFilter;
 
 import java.util.List;
 
+class TwoTuple
+{
+    int beginPos, endPos;
+    public TwoTuple(int beginPos, int endPos)
+    {
+        this.beginPos = beginPos;
+        this.endPos = endPos;
+    }
+}
 
 public class GoodLambdaFinder
 {
@@ -139,10 +148,10 @@ public class GoodLambdaFinder
 //                {
 //                    System.out.println(javaPath + " commit time: " + new Date(revCommit.getCommitTime())); //time decrease in order
 //                }
-                List<RemainedLambda> remainedLambdasThisFile = new ArrayList<>();
+                //List<RemainedLambda> remainedLambdasThisFile = new ArrayList<>();
                 Collections.reverse(revCommitList);
 
-                processRemainedLambdasForInitialCommit(revCommitList.get(0), revCommitList.get(N), javaPath);
+                processRemainedLambdasForInitialCommit(revCommitList, javaPath);
 
                 for (int i = 0; i < revCommitList.size() - N - 1; i++)
                 {
@@ -154,6 +163,7 @@ public class GoodLambdaFinder
                     String fileBeforeCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, parentCommit.getTree()).getObjectId(0)).getBytes());
                     String fileAfterCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, currentCommit.getTree()).getObjectId(0)).getBytes());
                     if (!fileAfterCommit.contains("->")) continue;
+                    //System.out.println("https://github.com/apache/" + repoName + "/blob/" + currentCommit.getName() + "/" + javaPath + "\t" + positionTupleListInitialCommit.size());
                     FileWriter oldFile, newFile;
 
                     try {
@@ -211,9 +221,10 @@ public class GoodLambdaFinder
                         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
 
                         List<PositionTuple> positionTupleListAfterCommit = new ArrayList<>();
-                        List<RemainedLambda> remainedLambdasCandidate = new ArrayList<>();
+                        List<RemainedLambda> remainedLambdaCandidates = new ArrayList<>();
                         GumtreeJDTDriver gumtreeJDTDriver = new GumtreeJDTDriver(fileAfterCommit, positionTupleListAfterCommit, true);  //i + 1
 
+                        //System.out.println("https://github.com/apache/" + repoName + "/blob/" + currentCommit.getName() + "/" + javaPath + "\t" + positionTupleListAfterCommit.size());
                         //System.out.println(positionTupleListAfterCommit.size());
                         for (PositionTuple positionTuple : positionTupleListAfterCommit)
                         {
@@ -221,13 +232,14 @@ public class GoodLambdaFinder
                             && BadLambdaFinder.lambdaInEdits(positionTuple, BadLambdaFinder.getMergedEdits(editsInsertedOrReplaced), "B"))
                             {
                                 //表示确实有新lambda生成
-                                remainedLambdasCandidate.add(new RemainedLambda(repo, currentCommit, url, javaPath, positionTuple, BadLambdaFinder.lambda_context(
-                                fileAfterCommit, positionTuple.beginLine, positionTuple.endLine, this.context), false));
+                                remainedLambdaCandidates.add(new RemainedLambda(repo, currentCommit, url, javaPath, positionTuple, BadLambdaFinder.lambda_context(
+                                fileAfterCommit, positionTuple.beginLine, positionTuple.endLine, this.context), revCommitList.get(i + 1 + N).getName(), false));
                             }
                         }
-                        if (remainedLambdasCandidate.size() > 0)
+                        if (remainedLambdaCandidates.size() > 0)
                         {
-                            compareCommitWithNLater(currentCommit, revCommitList.get(i + 1 + N), remainedLambdasCandidate, javaPath);
+                            compareCommitWithNLater(currentCommit, revCommitList.get(i + 1 + N), remainedLambdaCandidates, javaPath);
+                            //compareCommitWithNLaterOneByOne(revCommitList.subList(i, i + 1 + N), remainedLambdaCandidates, javaPath);
                         }
                         oldFile.close();
                         newFile.close();
@@ -239,26 +251,32 @@ public class GoodLambdaFinder
         }
     }
 
-    void processRemainedLambdasForInitialCommit(RevCommit initialCommit, RevCommit laterNCommit, String javaPath) throws IOException {
+    void processRemainedLambdasForInitialCommit(List<RevCommit> revCommitList, String javaPath) throws IOException {
+        RevCommit initialCommit = revCommitList.get(0);
+        RevCommit laterNCommit = revCommitList.get(N);
         List<PositionTuple> positionTupleListInitialCommit = new ArrayList<>();
-        List<RemainedLambda> remainedLambdasCandidate = new ArrayList<>();
+        List<RemainedLambda> remainedLambdaCandidates = new ArrayList<>();
         String initialCommitContent = new String(repo.open(TreeWalk.forPath(repo, javaPath, initialCommit.getTree()).getObjectId(0)).getBytes());
+        if (!initialCommitContent.contains("->")) return;
         GumtreeJDTDriver gumtreeJDTDriver = new GumtreeJDTDriver(initialCommitContent, positionTupleListInitialCommit, true);
+        //System.out.println("https://github.com/apache/" + repoName + "/blob/" + initialCommit.getName() + "/" + javaPath + "\t" + positionTupleListInitialCommit.size());
         for (PositionTuple positionTuple : positionTupleListInitialCommit)
         {
-            remainedLambdasCandidate.add(new RemainedLambda(repo, initialCommit, url, javaPath, positionTuple, BadLambdaFinder.lambda_context(
-                    initialCommitContent, positionTuple.beginLine, positionTuple.endLine, this.context), true));
+            remainedLambdaCandidates.add(new RemainedLambda(repo, initialCommit, url, javaPath, positionTuple, BadLambdaFinder.lambda_context(
+                    initialCommitContent, positionTuple.beginLine, positionTuple.endLine, this.context), laterNCommit.getName(), true));
         }
-        if (remainedLambdasCandidate.size() > 0)
+        if (remainedLambdaCandidates.size() > 0)
         {
-            compareCommitWithNLater(initialCommit, laterNCommit, remainedLambdasCandidate, javaPath);
+            compareCommitWithNLater(initialCommit, laterNCommit, remainedLambdaCandidates, javaPath);
+            //compareCommitWithNLaterOneByOne(revCommitList.subList(0, N + 1), remainedLambdaCandidates, javaPath);
         }
     }
 
-    void compareCommitWithNLater(RevCommit currentCommit, RevCommit laterNCommit, List<RemainedLambda> remainedLambdasCandidate, String javaPath) throws IOException {
+    void compareCommitWithNLater(RevCommit currentCommit, RevCommit laterNCommit, List<RemainedLambda> remainedLambdaCandidates, String javaPath) throws IOException {
         //if (TreeWalk.forPath(repo, javaPath, currentCommit.getTree()) == null || TreeWalk.forPath(repo, javaPath, laterNCommit.getTree()) == null) return; //seemed unnecessary here......
         String fileCurrentCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, currentCommit.getTree()).getObjectId(0)).getBytes());
         String fileLaterNCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, laterNCommit.getTree()).getObjectId(0)).getBytes());
+        if (!fileLaterNCommit.contains("->")) return;
         FileWriter oldFile, newFile;
         oldFile = new FileWriter("old-new-file\\oldfile.java");
         oldFile.write("");
@@ -275,11 +293,18 @@ public class GoodLambdaFinder
         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
 
-        for (RemainedLambda remainedLambda : remainedLambdasCandidate)
+        for (RemainedLambda remainedLambda : remainedLambdaCandidates)
         {
+//            System.out.println("remained lambda line:" + remainedLambda.beginLine + "\t" + remainedLambda.endLine);
+//            System.out.println("https://github.com/apache/" + repoName + "/blob/" + remainedLambda.introducedCommitHash + "/" + javaPath);
             if (mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos,
                     remainedLambda.endPos).get(0)) != null) //maybe we need to add more conditions here (looser)
             {
+                //assert oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos, remainedLambda.endPos).get(0).toTreeString().contains("LambdaExpression");
+//                System.out.println(oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos,
+//                        remainedLambda.endPos).get(0).toTreeString());
+//                System.out.println(oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos,
+//                        remainedLambda.endPos).get(0).getChild(0).toTreeString());
                 remainedLambda.introducedCommitHash = currentCommit.getName();
                 remainedLambda.NLaterCommitHash = laterNCommit.getName();
                 remainedLambdas.add(remainedLambda);
@@ -288,6 +313,83 @@ public class GoodLambdaFinder
 
         oldFile.close();
         newFile.close();
+    }
+
+    void compareCommitWithNLaterOneByOne(List<RevCommit> revCommitListToProcess, List<RemainedLambda> remainedLambdaCandidates, String javaPath) throws IOException
+    {
+        assert revCommitListToProcess.size() == N + 1;
+        for (RemainedLambda remainedLambda : remainedLambdaCandidates)
+        {
+            TwoTuple positionOfCandidate = new TwoTuple(remainedLambda.beginPos, remainedLambda.endPos);
+            boolean alive = true;
+            for (int i = 0; i < revCommitListToProcess.size() - 1; i++)
+            {
+                TwoTuple aliveTuple = compareCommitWithAdjacent(revCommitListToProcess.get(i), revCommitListToProcess.get(i + 1), positionOfCandidate, javaPath);
+                positionOfCandidate = aliveTuple;
+                if (aliveTuple == null)
+                {
+                    alive = false;
+                    break;
+                }
+            }
+
+            if (alive)
+            {
+                remainedLambdas.add(remainedLambda);
+                System.out.println("alive");
+            }
+            else System.out.println("dead");
+        }
+
+    }
+
+    TwoTuple compareCommitWithAdjacent(RevCommit currentCommit, RevCommit nextCommit, TwoTuple positionOfCandidate, String javaPath) throws IOException {
+        try {
+            String fileCurrentCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, currentCommit.getTree()).getObjectId(0)).getBytes());
+            String fileNextCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, nextCommit.getTree()).getObjectId(0)).getBytes());
+            if (!fileNextCommit.contains("->") || !fileCurrentCommit.contains("->")) return null;
+            FileWriter oldFile, newFile;
+            oldFile = new FileWriter("old-new-file\\oldfile.java");
+            oldFile.write("");
+            oldFile.write(fileCurrentCommit);
+            oldFile.flush();
+            newFile = new FileWriter("old-new-file\\newfile.java");
+            newFile.write("");
+            newFile.write(fileNextCommit);
+            newFile.flush();
+
+            Run.initGenerators();
+            Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
+            Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+            Matcher defaultMatcher = Matchers.getInstance().getMatcher();
+            MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
+
+            //test here
+//            System.out.println("old pos:" + positionOfCandidate.beginPos + "\t" + positionOfCandidate.endPos);
+//            System.out.println(oldFileTree.toTreeString());
+//            System.out.println("++++++++++++++++++++++++++++++++++++");
+
+            //System.out.println(newFileTree.toTreeString());
+
+
+            Tree result;
+            if (oldFileTree.getTreesBetweenPositions(positionOfCandidate.beginPos, positionOfCandidate.endPos).size() == 0)
+            {
+                result = null;
+            }
+            else result = mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(positionOfCandidate.beginPos, positionOfCandidate.endPos).get(0));
+            //System.out.println("new pos:" + result.getPos() + "\t" + result.getEndPos());
+            oldFile.close();
+            newFile.close();
+
+            if (result == null) return null;
+            else return new TwoTuple(result.getPos(), result.getEndPos());
+        } catch (IndexOutOfBoundsException e)
+        {
+            System.out.println("begin pos and end pos" + positionOfCandidate.beginPos + "\t" + positionOfCandidate.endPos);
+            System.out.println("https://github.com/apache/" + repoName + "/blob/" + currentCommit.getName() + "/" + javaPath);
+        }
+        return null;
     }
 
     public static void main(String[] args) throws IOException, GitAPIException
@@ -323,6 +425,8 @@ public class GoodLambdaFinder
             //TO-DO: reduce repeated introduced lambdas
             System.err.println("project " + project + "mining completed!");
             System.err.println("size of lambda list of " + project + ": " + goodLambdaFinder.remainedLambdas.size());
+
+            System.out.println(goodLambdaFinder.remainedLambdas.get(0).lambdaContext);
             RemainedLambda[] remainedLambdasForSerial = new RemainedLambda[goodLambdaFinder.remainedLambdas.size()];
             goodLambdaFinder.remainedLambdas.toArray(remainedLambdasForSerial);
             File file  = new File("ser/good-lambdas/test/" + ft.format(date));
