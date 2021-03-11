@@ -69,7 +69,7 @@ public class GumtreeLambdaFilter {
     private final Repository repo;
     private final Git git;
     private final String url;
-    private final Stemmer stemmer;
+    //private final Stemmer stemmer;
     private final int threshold;
     List<ModifiedLambda> modifiedLambdas;
     public GumtreeLambdaFilter()
@@ -77,7 +77,7 @@ public class GumtreeLambdaFilter {
         this.repo = null;
         this.git = null;
         this.url = null;
-        this.stemmer = null;
+        //this.stemmer = null;
         this.threshold = 0;
     }
 
@@ -100,7 +100,7 @@ public class GumtreeLambdaFilter {
         git = new Git(repo);
         this.url = url;
         this.modifiedLambdas = modifiedLambdas;
-        stemmer = new Stemmer();
+        //stemmer = new Stemmer();
         threshold = editThreshold;
         //walk all commits from the head commit
         walkAllCommits(repo, url);
@@ -116,10 +116,10 @@ public class GumtreeLambdaFilter {
         List<DiffEntry> diffs = formatter.scan(parentCommit, currentCommit);    //diffs now store all diff information between two commits
         int fileModified = diffs.size();
         String[] keywords = {"bug", "fix", "issue", "error", "crash"};
-        if (!commitRelatedToKeywords(currentCommit, keywords))
-        {
-            return;
-        }
+//        if (!commitRelatedToKeywords(currentCommit, keywords))
+//        {
+//            return;
+//        }
         diffs.forEach(diff ->
         {
             if (diff.getChangeType() == DiffEntry.ChangeType.DELETE || diff.getChangeType() == DiffEntry.ChangeType.ADD
@@ -361,47 +361,47 @@ public class GumtreeLambdaFilter {
         }
 
     }
-    public boolean commitRelatedToKeywords(ModifiedLambda lambda, String[] keywords)
-    {
-        RevCommit commit = lambda.currentCommit;
-        String message = commit.getFullMessage().toLowerCase();
-        stemmer.add(message.toCharArray(), message.length());
-        stemmer.stem();
-        String stemMsg = stemmer.toString();
-        String[] tokens = stemMsg.split("\\W+");
-
-        for (String keyword : keywords)
-        {
-            for (String token : tokens)
-            {
-                if (token.equals(keyword))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    public boolean commitRelatedToKeywords(RevCommit commit, String[] keywords)
-    {
-        String message = commit.getFullMessage().toLowerCase();
-        stemmer.add(message.toCharArray(), message.length());
-        stemmer.stem();
-        String stemMsg = stemmer.toString();
-        String[] tokens = stemMsg.split("\\W+");
-
-        for (String keyword : keywords)
-        {
-            for (String token : tokens)
-            {
-                if (token.equals(keyword))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+//    public boolean commitRelatedToKeywords(ModifiedLambda lambda, String[] keywords)
+//    {
+//        RevCommit commit = lambda.currentCommit;
+//        String message = commit.getFullMessage().toLowerCase();
+//        stemmer.add(message.toCharArray(), message.length());
+//        stemmer.stem();
+//        String stemMsg = stemmer.toString();
+//        String[] tokens = stemMsg.split("\\W+");
+//
+//        for (String keyword : keywords)
+//        {
+//            for (String token : tokens)
+//            {
+//                if (token.equals(keyword))
+//                {
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+//    }
+//    public boolean commitRelatedToKeywords(RevCommit commit, String[] keywords)
+//    {
+//        String message = commit.getFullMessage().toLowerCase();
+//        stemmer.add(message.toCharArray(), message.length());
+//        stemmer.stem();
+//        String stemMsg = stemmer.toString();
+//        String[] tokens = stemMsg.split("\\W+");
+//
+//        for (String keyword : keywords)
+//        {
+//            for (String token : tokens)
+//            {
+//                if (token.equals(keyword))
+//                {
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+//    }
     public void statisticsToExcel(List <ModifiedLambda> modifiedLambdas)
     {
 
