@@ -1,3 +1,4 @@
+package com.github.gumtreelambdaanalysis;
 import com.github.gumtreediff.actions.model.Action;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jgit.diff.DiffEntry;

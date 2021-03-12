@@ -1,3 +1,4 @@
+package com.github.gumtreelambdaanalysis;
 import com.github.gumtreediff.actions.EditScript;
 import com.github.gumtreediff.actions.EditScriptGenerator;
 import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
@@ -771,7 +772,7 @@ public class BadLambdaFinder {
         //String[] projectList = lines.toArray(new String[0]);
         bf.close();
 
-        String[] projectList = projectList_test;
+        String[] projectList = projectList_apache;
 
         //Keywords below might not be used now, please ignore them......
         String[] keywords_lambda = {"lambda"};
@@ -816,19 +817,19 @@ public class BadLambdaFinder {
             }
             SimplifiedModifiedLambda[] modifiedLambdasForSerial = new SimplifiedModifiedLambda[simplifiedModifiedLambdas.size()];
             simplifiedModifiedLambdas.toArray(modifiedLambdasForSerial);
-            File file = new File("ser/" + ft.format(date));
+            File file = new File("ser/bad-lambdas/test/" + ft.format(date));
             if (!file.exists())
             {
                 file.mkdirs();
             }
             //System.out.println(project.replace("/", " "));
 
-            FileOutputStream fileOut = new FileOutputStream("ser/" + ft.format(date) + "/" + project.replace("/", " ") + "-" + "revfilter-not-reduced" + ".ser");
+            FileOutputStream fileOut = new FileOutputStream("ser/bad-lambdas/test/" + ft.format(date) + "/" + project.replace("/", " ") + ".ser");
             ObjectOutputStream serOut = new ObjectOutputStream(fileOut);
             serOut.writeObject(modifiedLambdasForSerial);
             serOut.close();
             fileOut.close();
-            System.err.println("Serialized data is saved in ser/" + ft.format(date) + "/" + project.replace("/", " ") + "-" + "revfilter" + ".ser");
+            System.err.println("Serialized data is saved in ser/bad-lambdas/test/" + ft.format(date) + "/" + project.replace("/", " ") + ".ser");
         }
     }
 }
