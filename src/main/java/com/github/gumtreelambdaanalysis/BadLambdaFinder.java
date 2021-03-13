@@ -6,10 +6,10 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.client.Run;
 import com.github.gumtreediff.gen.SyntaxException;
 import com.github.gumtreediff.gen.TreeGenerators;
+import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
-import org.eclipse.jetty.util.ArrayUtil;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.*;
@@ -299,13 +299,13 @@ public class BadLambdaFinder {
                     FileWriter oldFile, newFile;
                     try {
                         //Cache target file in local file directory, maybe it's not so necessary......
-                        oldFile = new FileWriter("old-new-file\\oldfile.java");
+                        oldFile = new FileWriter("old-new-file/oldfile.java");
                         oldFile.write("");
                         String oldFileContent = new String(fileContentBeforeCommit.getBytes());
                         oldFile.write(oldFileContent);
                         oldFile.flush();
 
-                        newFile = new FileWriter("old-new-file\\newfile.java");
+                        newFile = new FileWriter("old-new-file/newfile.java");
                         newFile.write("");
                         newFile.write(new String(fileContentAfterCommit.getBytes()));
                         newFile.flush();
@@ -313,8 +313,11 @@ public class BadLambdaFinder {
                         Run.initGenerators();
                         //Build tree for both old and new files by Gumtree tool
 
-                        Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
-                        Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+//                        Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file/oldfile.java").getRoot();
+//                        Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file/newfile.java").getRoot();
+
+                        Tree oldFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/oldfile.java")).getRoot();
+                        Tree newFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/newfile.java")).getRoot();
 
                         //Diff information is stored in the variable "mappings"
                         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
@@ -772,7 +775,7 @@ public class BadLambdaFinder {
         //String[] projectList = lines.toArray(new String[0]);
         bf.close();
 
-        String[] projectList = projectList_apache;
+        String[] projectList = projectList_test;
 
         //Keywords below might not be used now, please ignore them......
         String[] keywords_lambda = {"lambda"};

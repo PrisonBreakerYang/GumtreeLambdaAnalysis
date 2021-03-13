@@ -1,0 +1,380 @@
+Query all of labels once selected labels condition is absent. (#5202)
+
+Query all of labels once selected labels condition is absent. (#5202)
+
+Storage elasticsearch health check (#5099)
+
+Change the model installation into the reactive module (#4761)
+
+Fix the cache unclear bug. (#4739)
+
+* Fix the cache unclear bug.
+
+* Update LimitedSizeBufferedData.java
+
+Co-authored-by: kezhenxu94 <kezhenxu94@apache.org>New metrics query protocol v2 (#4679)
+
+1. Support the new query protocol, and the v1 query protocol is still supported 
+2. All `numOfxxx`/`GlobalBrief` is only a mock now, no real number.
+3. typeOfMetrics service is a mock only too, follow up PR will implement this.New metrics query protocol v2 (#4679)
+
+1. Support the new query protocol, and the v1 query protocol is still supported 
+2. All `numOfxxx`/`GlobalBrief` is only a mock now, no real number.
+3. typeOfMetrics service is a mock only too, follow up PR will implement this.New metrics query protocol v2 (#4679)
+
+1. Support the new query protocol, and the v1 query protocol is still supported 
+2. All `numOfxxx`/`GlobalBrief` is only a mock now, no real number.
+3. typeOfMetrics service is a mock only too, follow up PR will implement this.Make 8.0.0 Core available. New protocol and register removed. (#4599)
+
+Here are the list of changes we made in this pull request. Top 3 are the principle changes, others are following these principles.
+1. New agent and mesh report protocol. 
+2. New agent header protocol. 
+3. Service register, instance register and network address register have been removed permanently.
+4. Service traffic, instance traffic and network alias metrics are added to replace the service, instance and network address inventory.
+5. Register process has been removed.
+6. Metrics stream process supports insert only mode, especially for traffic entities.
+7. Metrics stream process supports no-downsampling mode for traffic entities and network alias.
+8. Remove all register mechanism and cache in the java agent.
+9. Remove MONTH step in GraphQL query.
+10. Update UI to remove MONTH step query, the max query range is 60 days now.
+11. Simplify the TTL to metrics and record. And the unit has been formatted in Day unit. No specific TTL for ElasticSearch storage.
+12. Buffer mechanism of trace receiver and mesh receiver has been removed due to no register.
+13. New service id, instance id and endpoint id rules, including service relation, instance relation and endpoint relation id rules.
+14. Java agent support `keep tracing` mode, meaning, agent generating tracing context even the backend is unconnected/unavailable.
+15. Plugin test tool up to date, in order to support new protocol.
+16. Plugin tests expected data files updated.
+17. E2E tests updated.
+18. Telemetry of Grafana config has been merged into one.
+19. Documentation updates.
+20. [TBD] InfluxDB storage implementation is not available, need @dmsolr to fix later, in order to reduce the master change block by this PR.Make 8.0.0 Core available. New protocol and register removed. (#4599)
+
+Here are the list of changes we made in this pull request. Top 3 are the principle changes, others are following these principles.
+1. New agent and mesh report protocol. 
+2. New agent header protocol. 
+3. Service register, instance register and network address register have been removed permanently.
+4. Service traffic, instance traffic and network alias metrics are added to replace the service, instance and network address inventory.
+5. Register process has been removed.
+6. Metrics stream process supports insert only mode, especially for traffic entities.
+7. Metrics stream process supports no-downsampling mode for traffic entities and network alias.
+8. Remove all register mechanism and cache in the java agent.
+9. Remove MONTH step in GraphQL query.
+10. Update UI to remove MONTH step query, the max query range is 60 days now.
+11. Simplify the TTL to metrics and record. And the unit has been formatted in Day unit. No specific TTL for ElasticSearch storage.
+12. Buffer mechanism of trace receiver and mesh receiver has been removed due to no register.
+13. New service id, instance id and endpoint id rules, including service relation, instance relation and endpoint relation id rules.
+14. Java agent support `keep tracing` mode, meaning, agent generating tracing context even the backend is unconnected/unavailable.
+15. Plugin test tool up to date, in order to support new protocol.
+16. Plugin tests expected data files updated.
+17. E2E tests updated.
+18. Telemetry of Grafana config has been merged into one.
+19. Documentation updates.
+20. [TBD] InfluxDB storage implementation is not available, need @dmsolr to fix later, in order to reduce the master change block by this PR.Make 8.0.0 Core available. New protocol and register removed. (#4599)
+
+Here are the list of changes we made in this pull request. Top 3 are the principle changes, others are following these principles.
+1. New agent and mesh report protocol. 
+2. New agent header protocol. 
+3. Service register, instance register and network address register have been removed permanently.
+4. Service traffic, instance traffic and network alias metrics are added to replace the service, instance and network address inventory.
+5. Register process has been removed.
+6. Metrics stream process supports insert only mode, especially for traffic entities.
+7. Metrics stream process supports no-downsampling mode for traffic entities and network alias.
+8. Remove all register mechanism and cache in the java agent.
+9. Remove MONTH step in GraphQL query.
+10. Update UI to remove MONTH step query, the max query range is 60 days now.
+11. Simplify the TTL to metrics and record. And the unit has been formatted in Day unit. No specific TTL for ElasticSearch storage.
+12. Buffer mechanism of trace receiver and mesh receiver has been removed due to no register.
+13. New service id, instance id and endpoint id rules, including service relation, instance relation and endpoint relation id rules.
+14. Java agent support `keep tracing` mode, meaning, agent generating tracing context even the backend is unconnected/unavailable.
+15. Plugin test tool up to date, in order to support new protocol.
+16. Plugin tests expected data files updated.
+17. E2E tests updated.
+18. Telemetry of Grafana config has been merged into one.
+19. Documentation updates.
+20. [TBD] InfluxDB storage implementation is not available, need @dmsolr to fix later, in order to reduce the master change block by this PR.Make 8.0.0 Core available. New protocol and register removed. (#4599)
+
+Here are the list of changes we made in this pull request. Top 3 are the principle changes, others are following these principles.
+1. New agent and mesh report protocol. 
+2. New agent header protocol. 
+3. Service register, instance register and network address register have been removed permanently.
+4. Service traffic, instance traffic and network alias metrics are added to replace the service, instance and network address inventory.
+5. Register process has been removed.
+6. Metrics stream process supports insert only mode, especially for traffic entities.
+7. Metrics stream process supports no-downsampling mode for traffic entities and network alias.
+8. Remove all register mechanism and cache in the java agent.
+9. Remove MONTH step in GraphQL query.
+10. Update UI to remove MONTH step query, the max query range is 60 days now.
+11. Simplify the TTL to metrics and record. And the unit has been formatted in Day unit. No specific TTL for ElasticSearch storage.
+12. Buffer mechanism of trace receiver and mesh receiver has been removed due to no register.
+13. New service id, instance id and endpoint id rules, including service relation, instance relation and endpoint relation id rules.
+14. Java agent support `keep tracing` mode, meaning, agent generating tracing context even the backend is unconnected/unavailable.
+15. Plugin test tool up to date, in order to support new protocol.
+16. Plugin tests expected data files updated.
+17. E2E tests updated.
+18. Telemetry of Grafana config has been merged into one.
+19. Documentation updates.
+20. [TBD] InfluxDB storage implementation is not available, need @dmsolr to fix later, in order to reduce the master change block by this PR.[Inventory Design Change] Remove endpoint register and endpoint inventory (#4570)
+
+* Finish step one, source and entity changed.
+
+* Step 2, finish the basic and core DAO changes.
+
+* Step 3. Change all source codes of backend, and make project compiling successfully.
+
+* Make startup successful and persistence works.
+
+* Fix dead codes in the MySQLTableInstaller.
+
+* Fix mischange.
+
+* Fix MySQL storage bootstrap error.
+
+* Rollback dependency change.
+
+* Simply enable tailing logs from container no mater it's in CI or not
+
+* Fix segment table issue.
+
+* Fix MySQL Instanller.
+
+* Support Influxdb implementation of new endpoint traffic.
+
+* Set and modify timeout to 90mins
+
+* Remove unnecessary entity in the EndpointTraffic.
+
+* Fix wrong entity builder and make name more clear.
+
+* Fix 2 equal methods bug.
+
+* Fix InfluxDB identifier(name) conflict issue.
+
+* Fix endpoint topology query, endpoint id should be changed as a string.
+
+* Fix a missing change.
+
+* Fix a wrong commit.
+
+* Column name can't be changed, due to it affect the hybrid metadb(h2/mysql) query, change it explicitly with double quotation marks.
+
+* Fix formats.
+
+* Remove endpoint/operation register from the agent. and change the plugin tests(without local tests). operationId relation codes have been removed from agent too.
+
+* Try to fix the hytrix case.
+
+* Fix 3 cases.
+
+* Try to fix cases.
+
+* Fix 2.
+
+* Fix one.
+
+* Fix the serviceId type mis-change.
+
+* Fix int query
+
+* Fix hystrix case.
+
+* Fix a case.
+
+* Fix EndpointCallRelationDispatcher set the source/dest endpoint without id encoding.
+
+* Update documentation and add 2 test cases.
+
+Co-authored-by: kezhenxu94 <kezhenxu94@163.com>Change profile stack element data structure (#4332)
+
+* Change profile stack element to single level, not using tree
+Improve OAP server performance. (#3127)
+
+* Improve OAP server performance.All NEW OAL Runtime Engine (#3109)
+
+* Change OAL generator tool to runtime.
+
+Step 1. change project structure. API links and maven pom.
+
+* Part of metrics class generation
+
+* Metrcis class generated.
+
+* Set up the basic structure of new OAL engine.
+
+* Finish metrics generation.
+
+* Support dispatcher generation.
+
+* Format codes.
+
+* Generate dispatcher all methods.
+
+* Implement disable in hardcode.
+
+* Clear up
+
+* Fix compile startup.
+
+* Update license and document of new OAL engine.
+
+* Fix rat.
+
+* Disable class output in default
+
+* Copy from @kezhenxu94 's test PR, https://github.com/apache/skywalking/pull/3110
+
+* Wait for the mount command to finish
+#2860 (#2861)
+
+Get the document by index name.Refactor ConfigWatcherRegister to only read interested configs. fixes #2834 (#2835)
+
+New topology query protocol implementation (#2654)
+
+* Make backend fits new topology query protocol and logic.
+
+* Change topology line id.
+
+* Change endpoint point id rule to match service relation id rule.
+
+* Refactor util.
+
+* Revert wrong refactor by IDEA.
+
+* Revert some changes.
+
+* Fix entity id bug.
+
+* Fix endpoint topology query
+
+* Update UI.
+
+* UI license update.
+1. Delete service component indicator. (#1809)
+
+2. Make service relation and endpoint relation to record component id.
+3. Delete service mapping indicator.
+4. Make service inventory to record mapping service id.
+5. Refactor global topology query and service topology query.1. Delete service component indicator. (#1809)
+
+2. Make service relation and endpoint relation to record component id.
+3. Delete service mapping indicator.
+4. Make service inventory to record mapping service id.
+5. Refactor global topology query and service topology query.1. Delete service component indicator. (#1809)
+
+2. Make service relation and endpoint relation to record component id.
+3. Delete service mapping indicator.
+4. Make service inventory to record mapping service id.
+5. Refactor global topology query and service topology query.Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Streaming analysis topology test success. (#1646)
+
+* Add generate indicator and dispatcher about service topology but not test.
+
+* Delete call type from service relation.
+
+* Streaming analysis topology test success.
+
+* Fixed the check style error.
+Change alarm notification to batch mode.
+Segment start time: minimum start time in all span (#1156)
+
+Segment end time: maximum end time in all span
+
+#1149Fixed #906 and #903 (#916)
+
+* Fixed the no data avg throughput in service bug.
+
+* Fixed no parent dependency for service dependency graph #906
+1. Get the service id only when agent register service name.
+2. Setting the src span type when agent register service name.
+3. Revert the topology build logic.
+Fixed the bug which the memory max non heap metric value is -1 when using JDK 1.8.
+Fixed the Dashboard and Topology bug.
+The nodes and calls in cluster topology build success.
+The nodes and calls in cluster topology build success.
+The nodes and calls in cluster topology build success.
+Change all daos to be services.
+Change all daos to be services.
+Register graph finish.
+Segments divided into two types, depending on if ids exchange successful.
+1. Success: send to analytic worker
+2. Failure: write into file.
+Segments divided into two types, depending on if ids exchange successful.
+1. Success: send to analytic worker
+2. Failure: write into file.
+Fixed the GlobalTraceId contidtion not effect in trece stack web ui.
+Segment cost save to es success
+Segment cost save to es success
+Add agent server module to get the collector stream server address
+/agentstream/grpc
+/agentstream/jetty
+module install
+#266

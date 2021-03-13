@@ -5,6 +5,7 @@ import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.client.Run;
 import com.github.gumtreediff.gen.TreeGenerators;
+import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
@@ -318,7 +319,7 @@ public class Test
 
         //String[] keywords = keywords_concurrentMod;
         String[] keywords = null;
-        File writeFile = new File("statistics/" + "lambda-abuse/test/ambari-"+ Arrays.toString(keywords) + ".csv");
+        File writeFile = new File("statistics/" + "lambda-abuse/test/skywalking-"+ Arrays.toString(keywords) + ".csv");
         try {
             String[] paths = {"ser/03-07"};
             for (String path : paths)
@@ -389,8 +390,11 @@ public class Test
         Run.initGenerators(); // registers the available parsers
         String srcFile = "C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\ZipkinTracer_old.java";
         String dstFile = "C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\ZipkinTracer_new.java";
-        Tree src = TreeGenerators.getInstance().getTree(srcFile).getRoot(); // retrieves and applies the default parser for the file
-        Tree dst = TreeGenerators.getInstance().getTree(dstFile).getRoot(); // retrieves and applies the default parser for the file
+//        Tree src = TreeGenerators.getInstance().getTree(srcFile).getRoot(); // retrieves and applies the default parser for the file
+//        Tree dst = TreeGenerators.getInstance().getTree(dstFile).getRoot(); // retrieves and applies the default parser for the file
+        Tree src = new JdtTreeGenerator().generate(new FileReader(srcFile)).getRoot();
+        Tree dst = new JdtTreeGenerator().generate(new FileReader(dstFile)).getRoot();
+
         Matcher defaultMatcher = Matchers.getInstance().getMatcher(); // retrieves the default matcher
         MappingStore mappings = defaultMatcher.match(src, dst); // computes the mappings between the trees
         EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator(); // instantiates the simplified Chawathe script generator
@@ -402,7 +406,8 @@ public class Test
     }
     public static void test() throws IOException {
         Run.initGenerators();
-        Tree fileTree = TreeGenerators.getInstance().getTree("test-java-file/CoreModuleProvider.java").getRoot();
+//        Tree fileTree = TreeGenerators.getInstance().getTree("test-java-file/CoreModuleProvider.java").getRoot();
+        Tree fileTree = new JdtTreeGenerator().generate(new FileReader("test-java-file/CoreModuleProvider.java")).getRoot();
 
         System.out.println(fileTree.toTreeString());
     }
