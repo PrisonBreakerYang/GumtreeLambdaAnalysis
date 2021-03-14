@@ -9,6 +9,8 @@ import java.io.Serializable;
 import java.util.*;
 class SimplifiedModifiedLambda implements Serializable
 {
+    private static final long serialVersionUID = 2L;
+
     String repo;
     String commitURL;
     String filePath;
@@ -69,7 +71,6 @@ public class ModifiedLambda
     float actionSize_avg;
     int actionDepth_max, actionHeight_max, actionSize_max;
     boolean oneLineLambda;
-    boolean messageRelatedToKeywords;
     int nodesNum;
     int fileModified;
     int javaFileModified;

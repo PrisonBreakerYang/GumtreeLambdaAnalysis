@@ -1,11 +1,6 @@
 package com.github.gumtreelambdaanalysis;
-import com.github.gumtreediff.actions.EditScript;
-import com.github.gumtreediff.actions.EditScriptGenerator;
-import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
 import com.github.gumtreediff.actions.model.Action;
-import com.github.gumtreediff.client.Run;
 import com.github.gumtreediff.gen.SyntaxException;
-import com.github.gumtreediff.gen.TreeGenerators;
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
@@ -26,11 +21,9 @@ import opennlp.tools.stemmer.PorterStemmer;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import com.github.gumtreediff.tree.Tree;
 
@@ -310,7 +303,7 @@ public class BadLambdaFinder {
                         newFile.write(new String(fileContentAfterCommit.getBytes()));
                         newFile.flush();
 
-                        Run.initGenerators();
+                        //Run.initGenerators();
                         //Build tree for both old and new files by Gumtree tool
 
 //                        Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file/oldfile.java").getRoot();

@@ -1,13 +1,16 @@
 package com.github.gumtreelambdaanalysis;
-import org.eclipse.jgit.api.Git;
-import com.github.gumtreediff.client.Run;
+
 import com.github.gumtreediff.gen.SyntaxException;
-import com.github.gumtreediff.gen.TreeGenerators;
+import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
+import com.github.gumtreediff.tree.Tree;
+import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.diff.*;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.patch.HunkHeader;
@@ -18,18 +21,13 @@ import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
-import com.github.gumtreediff.tree.Tree;
-import org.eclipse.jgit.treewalk.filter.PathFilter;
-import org.eclipse.jgit.treewalk.filter.TreeFilter;
-
-import java.util.List;
 
 class TwoTuple
 {
@@ -215,9 +213,9 @@ public class GoodLambdaFinder
                         }
                         if (editsInsertedOrReplaced.isEmpty()) continue;
 
-                        Run.initGenerators();
-                        Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();    //i
-                        Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();    //i + 1
+                        //Run.initGenerators();
+                        Tree oldFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/oldfile.java")).getRoot();
+                        Tree newFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/newfile.java")).getRoot();    //i + 1
                         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
                         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
 
@@ -229,6 +227,7 @@ public class GoodLambdaFinder
                         //System.out.println(positionTupleListAfterCommit.size());
                         for (PositionTuple positionTuple : positionTupleListAfterCommit)
                         {
+                            if (newFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).size() == 0) continue;
                             if (mappings.getSrcForDst(newFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).get(0)) == null
                             && BadLambdaFinder.lambdaInEdits(positionTuple, BadLambdaFinder.getMergedEdits(editsInsertedOrReplaced), "B"))
                             {
@@ -288,9 +287,12 @@ public class GoodLambdaFinder
         newFile.write(fileLaterNCommit);
         newFile.flush();
 
-        Run.initGenerators();
-        Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
-        Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+        //Run.initGenerators();
+//        Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
+//        Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+        Tree oldFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/oldfile.java")).getRoot();
+        Tree newFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/newfile.java")).getRoot();
+
         Matcher defaultMatcher = Matchers.getInstance().getMatcher();
         MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
 
@@ -298,6 +300,7 @@ public class GoodLambdaFinder
         {
 //            System.out.println("remained lambda line:" + remainedLambda.beginLine + "\t" + remainedLambda.endLine);
 //            System.out.println("https://github.com/apache/" + repoName + "/blob/" + remainedLambda.introducedCommitHash + "/" + javaPath);
+            if (oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos, remainedLambda.endPos).size() == 0) continue;
             if (mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos,
                     remainedLambda.endPos).get(0)) != null) //maybe we need to add more conditions here (looser)
             {
@@ -359,9 +362,12 @@ public class GoodLambdaFinder
             newFile.write(fileNextCommit);
             newFile.flush();
 
-            Run.initGenerators();
-            Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
-            Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+            //Run.initGenerators();
+//            Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
+//            Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+            Tree oldFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/oldfile.java")).getRoot();
+            Tree newFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/newfile.java")).getRoot();
+
             Matcher defaultMatcher = Matchers.getInstance().getMatcher();
             MappingStore mappings = defaultMatcher.match(oldFileTree, newFileTree);
 
@@ -423,7 +429,7 @@ public class GoodLambdaFinder
             String url = "https://github.com/" + project + ".git";
             String repoUrl = url.substring(0, url.lastIndexOf(".git"));
             GoodLambdaFinder goodLambdaFinder = new GoodLambdaFinder(url, repoPath, 0, 10, 10);
-            //TO-DO: reduce repeated introduced lambdas
+            //TO-DO: reduce repeated introduced lambdas //seems not necessary?
             System.err.println("project " + project + "mining completed!");
             System.err.println("size of lambda list of " + project + ": " + goodLambdaFinder.remainedLambdas.size());
 
