@@ -84,6 +84,28 @@
             <artifactId>client</artifactId>
             <version>3.0.0-beta1</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.gumtreediff</groupId>
+            <artifactId>gen.jdt</artifactId>
+            <version>3.0.0-beta1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kennycason</groupId>
+            <artifactId>kumo-core</artifactId>
+            <version>1.28</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kennycason</groupId>
+            <artifactId>kumo-tokenizers</artifactId>
+            <version>1.28</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.kennycason/kumo -->
+        <dependency>
+            <groupId>com.kennycason</groupId>
+            <artifactId>kumo</artifactId>
+            <version>1.28</version>
+            <type>pom</type>
+        </dependency>
     </dependencies>
     
 
