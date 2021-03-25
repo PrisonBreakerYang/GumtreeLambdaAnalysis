@@ -299,29 +299,26 @@ class LambdaFilter
 
 public class Test
 {
-    public static void main1(String[] args) throws IOException, ClassNotFoundException {
+    public static String getCommitTime(SimplifiedModifiedLambda lambda) throws IOException {
+        String repoPath = "../repos/" + lambda.commitURL.replace("https://github.com/apache/", "").split("/commit")[0];
+        Repository repo = new FileRepositoryBuilder().setGitDir(new File(repoPath + "/.git")).build();
+        RevWalk tempRevWalk = new RevWalk(repo);
+        RevCommit commit = tempRevWalk.parseCommit(repo.resolve(lambda.currentCommit.split(" ")[1]));
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        long timestamp = Long.parseLong(String.valueOf(commit.getCommitTime())) * 1000;
+        String date = formatter.format(new Date(timestamp));
+        repo.close();
+        tempRevWalk.close();
+        return date;
+    }
+    public static void toCsv() throws IOException, ClassNotFoundException {
         List<SimplifiedModifiedLambda> simplifiedModifiedLambdaList = new ArrayList<>();
-        //FileInputStream fileIn = new FileInputStream("ser/01-31-11-43/rabbitmq rabbitmq-jms-client.ser");
-//        ObjectInputStream in = new ObjectInputStream(fileIn);
-//        SimplifiedModifiedLambda[] simplifiedModifiedLambdas = (SimplifiedModifiedLambda[]) in.readObject();
-//        simplifiedModifiedLambdaList = new ArrayList<>(Arrays.asList(simplifiedModifiedLambdas));
-//        for (SimplifiedModifiedLambda simplifiedModifiedLambda : simplifiedModifiedLambdaList)
-//        {
-//            System.out.println(simplifiedModifiedLambda.javaFileModified);
-//        }
-        String[] keywords_lambda = {"lambda"};
-        String[] keywords_performance = {"optimize", "efficiency", "performance", "overhead", "cost", "perf"};
-        String[] keywords_lazy = {"lazy", "eager", "outdated", "evaluate", "execute"};
-        String[] keywords_serialization = {"serialize" , "transient"};
-        String[] keywords_compatibility = {"compatible", "version", "jdk"};
-        String[] keywords_concurrentMod = {"concurrent", "parallel", "race", "hang"};
-        String[] keywords_flaky = {"flaky"};
 
-        //String[] keywords = keywords_concurrentMod;
         String[] keywords = null;
-        File writeFile = new File("statistics/" + "lambda-abuse/test/skywalking-"+ Arrays.toString(keywords) + ".csv");
+        File writeFile = new File("statistics/" + "removed-lambdas-list/"+ "data-of-51-repos-with-date" + ".csv");
         try {
-            String[] paths = {"ser/03-07"};
+            String serPath = "ser\\bad-lambdas\\test";
+            String[] paths = {serPath + "\\03-15", serPath + "\\03-16", serPath + "\\03-17", serPath + "\\03-18"};
             for (String path : paths)
             {
                 File file = new File(path);
@@ -329,7 +326,7 @@ public class Test
                 assert fileList != null;
                 for (File serFile : fileList)
                 {
-                    if (serFile.toString().endsWith(Arrays.toString(keywords) + ".ser"))
+                    if (serFile.toString().endsWith(".ser"))
                     {
                         //System.out.println("line 332");
                         FileInputStream fileIn = new FileInputStream(serFile);
@@ -341,7 +338,7 @@ public class Test
             }
             BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
             //writer.newLine();
-            writer.write("seq,project,file path,file name,lambda line number,edit line number,modified java files,git command, commit link");
+            writer.write("seq,project,file path,file name,lambda line number,edit line number,modified java files,git command,remove date,commit link");
             int seq = 1;
             for (SimplifiedModifiedLambda simplifiedModifiedLambda : simplifiedModifiedLambdaList)
             {
@@ -351,7 +348,7 @@ public class Test
                         + "," + simplifiedModifiedLambda.filePath + "," + simplifiedModifiedLambda.filePath.split("/")[temp - 1] + ","
                 + "L" + simplifiedModifiedLambda.beginLine + "-" + "L" + simplifiedModifiedLambda.endLine + ","
                 + "L" + simplifiedModifiedLambda.editBeginLine + "-" + "L" + simplifiedModifiedLambda.editEndLine + "," + simplifiedModifiedLambda.javaFileModified
-                + "," + simplifiedModifiedLambda.gitCommand  + "," + simplifiedModifiedLambda.commitURL);
+                + "," + simplifiedModifiedLambda.gitCommand  + "," + getCommitTime(simplifiedModifiedLambda) + "," + simplifiedModifiedLambda.commitURL);
                 seq += 1;
             }
             writer.flush();
@@ -362,57 +359,9 @@ public class Test
             e.printStackTrace();
         }
     }
-    public static void main2(String[] args) throws IOException, GitAPIException {
-        LambdaFilter lf = new LambdaFilter("https://github.com/apache/hive.git", null, 10);
-        lf.showDiff();
-    }
-    public static void main3(String[] args) throws IOException {
-        for (int i = 1; i <= 5782; i++) {
-            String githubUrl = "https://issues.apache.org/jira/browse/GEODE-" + i;
-            String jiraPrefix = "https://issues.apache.org/jira/si/jira.issueviews:issue-xml/";
-            String jiraID = "GEODE-" + i;
-            String xmlUrl = jiraPrefix + jiraID + "/" + jiraID + ".xml";
-            URL url = new URL(xmlUrl);
-            InputStream stream = url.openStream();
-            //Document doc = docBuilder.parse(stream);
-            try {
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                Document doc = builder.parse(stream);
-                NodeList nl = doc.getElementsByTagName("description");
-                System.out.println("number:" + i + ":" + nl.item(1).getFirstChild().getTextContent().split("</p>")[0].replace("<p>", ""));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    public static void main4(String[] args) throws IOException {
-        Run.initGenerators(); // registers the available parsers
-        String srcFile = "C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\ZipkinTracer_old.java";
-        String dstFile = "C:\\Users\\28902\\gumtree\\dist\\build\\install\\gumtree\\bin\\ZipkinTracer_new.java";
-//        Tree src = TreeGenerators.getInstance().getTree(srcFile).getRoot(); // retrieves and applies the default parser for the file
-//        Tree dst = TreeGenerators.getInstance().getTree(dstFile).getRoot(); // retrieves and applies the default parser for the file
-        Tree src = new JdtTreeGenerator().generate(new FileReader(srcFile)).getRoot();
-        Tree dst = new JdtTreeGenerator().generate(new FileReader(dstFile)).getRoot();
 
-        Matcher defaultMatcher = Matchers.getInstance().getMatcher(); // retrieves the default matcher
-        MappingStore mappings = defaultMatcher.match(src, dst); // computes the mappings between the trees
-        EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator(); // instantiates the simplified Chawathe script generator
-        EditScript actions = editScriptGenerator.computeActions(mappings); // computes the edit script
-        for (Action action : actions)
-        {
-            System.out.println(action);
-        }
-    }
-    public static void test() throws IOException {
-        Run.initGenerators();
-//        Tree fileTree = TreeGenerators.getInstance().getTree("test-java-file/CoreModuleProvider.java").getRoot();
-        Tree fileTree = new JdtTreeGenerator().generate(new FileReader("test-java-file/CoreModuleProvider.java")).getRoot();
-
-        System.out.println(fileTree.toTreeString());
-    }
 
     public static void main(String[] args) throws IOException, GitAPIException, ClassNotFoundException {
-        Test.test();
+        Test.toCsv(); //extract bad lambdas information form .ser file
     }
 }

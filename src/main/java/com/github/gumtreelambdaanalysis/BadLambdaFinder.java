@@ -755,8 +755,8 @@ public class BadLambdaFinder {
                 "apache/netbeans",
                 "apache/tomcat"
         };
-        String[] projectList_test = {"apache/skywalking"};
-        String listPath = "oopsla_2017_list.txt";
+        String[] projectList_test = {"apache/camel"};
+        String listPath = "apache_list_5.txt";
         String repoPath = "../repos";
         BufferedReader bf = new BufferedReader(new FileReader(listPath));
         String s = null;
@@ -765,10 +765,11 @@ public class BadLambdaFinder {
         {
             lines.add(s);
         }
+        String[] projectList = projectList_test;
         //String[] projectList = lines.toArray(new String[0]);
         bf.close();
 
-        String[] projectList = projectList_test;
+        //String[] projectList = projectList_test;
 
         //Keywords below might not be used now, please ignore them......
         String[] keywords_lambda = {"lambda"};
