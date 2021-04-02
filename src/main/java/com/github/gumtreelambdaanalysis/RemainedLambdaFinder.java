@@ -255,6 +255,7 @@ public class RemainedLambdaFinder
                                     && BadLambdaFinder.lambdaInEdits(positionTuple, BadLambdaFinder.getMergedEdits(editsInsertedOrReplaced), "B"))
                             {
                                 //表示确实有新lambda生成
+                                initialCount ++;
                                 remainedLambdaCandidates.add(new RemainedLambda(repo, currentCommit, url, javaPath, positionTuple, BadLambdaFinder.lambda_context(
                                         fileAfterCommit, positionTuple.beginLine, positionTuple.endLine, this.context), revCommitList.get(revCommitList.size() - 1).getName(),
                                         filesModified, javaFilesModified, revCommitList.size() - (i + 1), false));
@@ -538,7 +539,7 @@ public class RemainedLambdaFinder
         }
         bf.close();
 
-        String[] projectList_test = {"apache/ambari"};
+        String[] projectList_test = {"apache/skywalking"};
         //String[] projectList = lines.toArray(new String[0]);
         String[] projectList = projectList_test;
 
