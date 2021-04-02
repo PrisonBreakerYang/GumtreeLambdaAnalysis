@@ -93,7 +93,7 @@ public class BadLambdaFinder {
         {
             assert editList.get(seq).getType() == Edit.Type.DELETE || editList.get(seq).getType() == Edit.Type.REPLACE;
             assert editList.get(seq).getBeginA() > editList.get(seq - 1).getEndA();
-            if (editList.get(seq).getBeginA() == mergedEdits.get(mergedEdits.size() - 1).getEndA() + 1)
+            if (editList.get(seq).getBeginA() == mergedEdits.get(mergedEdits.size() - 1).getEndA())
             {
                 int as = mergedEdits.get(mergedEdits.size() - 1).getBeginA();
                 int ae = editList.get(seq).getEndA();

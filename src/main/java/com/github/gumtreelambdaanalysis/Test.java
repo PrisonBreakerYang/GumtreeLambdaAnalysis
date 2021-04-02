@@ -10,6 +10,7 @@ import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.Tree;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.*;
@@ -19,20 +20,22 @@ import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
-import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 import java.io.*;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -299,23 +302,64 @@ class LambdaFilter
 
 public class Test
 {
-    public static String getCommitTime(SimplifiedModifiedLambda lambda) throws IOException {
+    public static int getCommitInfo(SimplifiedModifiedLambda lambda, StringBuffer commitDate, StringBuffer committerId, StringBuffer committerEmail,
+                                    StringBuffer authorId, StringBuffer authorEmail) throws IOException, GitAPIException {
         String repoPath = "../repos/" + lambda.commitURL.replace("https://github.com/apache/", "").split("/commit")[0];
         Repository repo = new FileRepositoryBuilder().setGitDir(new File(repoPath + "/.git")).build();
         RevWalk tempRevWalk = new RevWalk(repo);
         RevCommit commit = tempRevWalk.parseCommit(repo.resolve(lambda.currentCommit.split(" ")[1]));
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         long timestamp = Long.parseLong(String.valueOf(commit.getCommitTime())) * 1000;
-        String date = formatter.format(new Date(timestamp));
+        commitDate.append(formatter.format(new Date(timestamp)));
+        committerId.append(commit.getCommitterIdent().getName().replace(",", " "));
+        committerEmail.append(commit.getCommitterIdent().getEmailAddress());
+        authorId.append(commit.getAuthorIdent().getName().replace(",", " "));
+        authorEmail.append(commit.getAuthorIdent().getEmailAddress());
+
+        assert commit.getParentCount() == 1;
+        RevCommit parentCommit = commit.getParent(0);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        DiffFormatter tempFormatter = new DiffFormatter(outputStream);
+        tempFormatter.setRepository(repo);
+        //formatter.setDiffAlgorithm(DiffAlgorithm.getAlgorithm(DiffAlgorithm.SupportedAlgorithm.MYERS));
+        List<DiffEntry> diffs = tempFormatter.scan(parentCommit, commit);
+
+        int linesDeleted = 0;
+        //int linesDeleted = 0;
+        for (DiffEntry diff : diffs)
+        {
+            if (diff.getChangeType() == DiffEntry.ChangeType.DELETE
+                    || diff.getChangeType() == DiffEntry.ChangeType.ADD) continue;
+            FileHeader fileHeader = tempFormatter.toFileHeader(diff);
+            if (!fileHeader.getOldPath().endsWith(".java")) continue;
+            for (Edit edit : fileHeader.toEditList()) {
+                linesDeleted += edit.getEndA() - edit.getBeginA();
+                //linesAdded += edit.getEndB() - edit.getBeginB();
+            }
+        }
+        tempFormatter.close();
+        //if (committerId.toString().equals("GitHub")) System.out.println(new String(commit.getRawBuffer(), commit.getEncoding()));
         repo.close();
         tempRevWalk.close();
-        return date;
+        return linesDeleted;
     }
-    public static void toCsv() throws IOException, ClassNotFoundException {
+    static String byte2Hex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        String temp = null;
+        for (byte aByte : bytes) {
+            temp = Integer.toHexString(aByte & 0xFF);
+            if (temp.length() == 1) {
+                // 1得到一位的进行补0操作
+                sb.append("0");
+            }
+            sb.append(temp);
+        }
+        return sb.toString();
+    }
+    public static void show() throws IOException, ClassNotFoundException {
         List<SimplifiedModifiedLambda> simplifiedModifiedLambdaList = new ArrayList<>();
-
         String[] keywords = null;
-        File writeFile = new File("statistics/" + "removed-lambdas-list/"+ "data-of-51-repos-with-date" + ".csv");
+        File writeFile = new File("statistics/" + "removed-lambdas-list/"+ "data-of-51-repos-with-link-to-diff-file" + ".csv");
         try {
             String serPath = "ser\\bad-lambdas\\test";
             String[] paths = {serPath + "\\03-15", serPath + "\\03-16", serPath + "\\03-17", serPath + "\\03-18"};
@@ -335,33 +379,67 @@ public class Test
                         simplifiedModifiedLambdaList.addAll(new ArrayList<>(Arrays.asList(simplifiedModifiedLambdas)));
                     }
                 }
+                toCsv(simplifiedModifiedLambdaList, writeFile);
             }
-            BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
-            //writer.newLine();
-            writer.write("seq,project,file path,file name,lambda line number,edit line number,modified java files,git command,remove date,commit link");
-            int seq = 1;
-            for (SimplifiedModifiedLambda simplifiedModifiedLambda : simplifiedModifiedLambdaList)
-            {
-                writer.newLine();
-                int temp = simplifiedModifiedLambda.filePath.split("/").length;
-                writer.write(seq + "," + simplifiedModifiedLambda.commitURL.replace("https://github.com/", "").split("/commit")[0]
-                        + "," + simplifiedModifiedLambda.filePath + "," + simplifiedModifiedLambda.filePath.split("/")[temp - 1] + ","
-                + "L" + simplifiedModifiedLambda.beginLine + "-" + "L" + simplifiedModifiedLambda.endLine + ","
-                + "L" + simplifiedModifiedLambda.editBeginLine + "-" + "L" + simplifiedModifiedLambda.editEndLine + "," + simplifiedModifiedLambda.javaFileModified
-                + "," + simplifiedModifiedLambda.gitCommand  + "," + getCommitTime(simplifiedModifiedLambda) + "," + simplifiedModifiedLambda.commitURL);
-                seq += 1;
-            }
-            writer.flush();
-            writer.close();
-        }catch (FileNotFoundException e)
+
+        }catch (FileNotFoundException | GitAPIException | NoSuchAlgorithmException e)
         {
             System.err.println("can't find the file");
             e.printStackTrace();
         }
     }
 
+    static void toCsv(List<SimplifiedModifiedLambda> simplifiedModifiedLambdaList, File writeFile) throws IOException, GitAPIException, NoSuchAlgorithmException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
+        //writer.newLine();
 
-    public static void main(String[] args) throws IOException, GitAPIException, ClassNotFoundException {
-        Test.toCsv(); //extract bad lambdas information form .ser file
+        writer.write("seq,project,file path,file name,percentage(commit),deleted lines(commit),lambda lines,lambda line number,edit line number,percentage(edit)," +
+                "modified java files,git command,remove date,committer id,committer mail,author id,author mail,diff file link,commit link");
+        int seq = 1;
+        DecimalFormat df = new DecimalFormat("#0.000");
+        Map<String, Integer> lambdaLinesPerCommit = removedLambdaLinesOfCommits(simplifiedModifiedLambdaList);
+        for (SimplifiedModifiedLambda simplifiedModifiedLambda : simplifiedModifiedLambdaList)
+        {
+            StringBuffer commitDate = new StringBuffer(""), committerId = new StringBuffer(""), committerEmail = new StringBuffer(""), authorId = new StringBuffer(), authorEmail = new StringBuffer();
+            int linesDeletedThisCommit = getCommitInfo(simplifiedModifiedLambda, commitDate, committerId, committerEmail, authorId, authorEmail);
+            writer.newLine();
+            int temp = simplifiedModifiedLambda.filePath.split("/").length;
+            int lambdaLines = simplifiedModifiedLambda.endLine - simplifiedModifiedLambda.beginLine + 1;
+            double proportion = (double) (Integer.min(simplifiedModifiedLambda.editEndLine, simplifiedModifiedLambda.endLine) - simplifiedModifiedLambda.beginLine + 1) / (simplifiedModifiedLambda.editEndLine - simplifiedModifiedLambda.editBeginLine + 1);
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            messageDigest.update(simplifiedModifiedLambda.filePath.getBytes("UTF-8"));
+            String diffHash = byte2Hex(messageDigest.digest());
+            writer.write(seq + "," + simplifiedModifiedLambda.commitURL.replace("https://github.com/", "").split("/commit")[0]
+                    + "," + simplifiedModifiedLambda.filePath + "," + simplifiedModifiedLambda.filePath.split("/")[temp - 1] + ","
+                    + df.format((float)(lambdaLinesPerCommit.get(simplifiedModifiedLambda.commitURL)) / (float)(linesDeletedThisCommit)) + "," + linesDeletedThisCommit + "," + lambdaLines + ","
+                    + "L" + simplifiedModifiedLambda.beginLine + "-" + "L" + simplifiedModifiedLambda.endLine + ","
+                    + "L" + simplifiedModifiedLambda.editBeginLine + "-" + "L" + simplifiedModifiedLambda.editEndLine + "," + df.format(proportion) + "," + simplifiedModifiedLambda.javaFileModified
+                    + "," + simplifiedModifiedLambda.gitCommand  + "," + commitDate + "," + committerId + "," + committerEmail + "," + authorId + "," + authorEmail + ","
+                    + simplifiedModifiedLambda.commitURL + "#diff-" + diffHash + "L" + simplifiedModifiedLambda.beginLine + "," + simplifiedModifiedLambda.commitURL);
+            seq += 1;
+        }
+        writer.flush();
+        writer.close();
+    }
+
+    static Map<String, Integer> removedLambdaLinesOfCommits(List<SimplifiedModifiedLambda> lambdas)
+    {
+        Map<String, Integer> lambdaLinesPerCommit = new HashMap<>();
+        for (SimplifiedModifiedLambda lambda : lambdas)
+        {
+            if (!lambdaLinesPerCommit.containsKey(lambda.commitURL))
+            {
+                lambdaLinesPerCommit.put(lambda.commitURL, lambda.endLine - lambda.beginLine + 1);
+            }
+            else
+            {
+                lambdaLinesPerCommit.put(lambda.commitURL, lambdaLinesPerCommit.get(lambda.commitURL) + (lambda.endLine - lambda.beginLine + 1));
+            }
+        }
+        return lambdaLinesPerCommit;
+    }
+
+    public static void main(String[] args) throws IOException, GitAPIException, ClassNotFoundException, NoSuchAlgorithmException {
+        show();
     }
 }

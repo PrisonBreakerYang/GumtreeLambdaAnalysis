@@ -8,6 +8,8 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
 
 import java.io.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -94,10 +96,11 @@ public class RemainedLambda implements Serializable
     {
         String writePath = "statistics/" + "remained-lambdas-list/";
         String serPath = "ser/good-lambdas/test/";
-        File writeFile = new File( writePath + "data-of-remained-lambdas-myfaces-onebyone.csv");
+        File writeFile = new File( writePath + "data-of-remained-lambdas-51repos-without-merge.csv");
         List<RemainedLambda> remainedLambdaList = new ArrayList<>();
         try {
-            String[] readPath = {serPath + "\\03-22"};
+            //String[] readPath = {serPath + "\\03-24", serPath + "\\03-25", serPath + "\\03-26", serPath + "\\03-27", serPath + "\\03-30"};
+            String[] readPath = {"ser/good-lambdas"};
             for (String path : readPath)
             {
                 File file = new File(path);
@@ -105,7 +108,7 @@ public class RemainedLambda implements Serializable
                 assert fileList != null;
                 for (File serFile : fileList)
                 {
-                    if (!serFile.toString().endsWith("onebyone.ser")) continue;
+                    if (!serFile.toString().endsWith("without-merge_T=10.ser")) continue;
                     FileInputStream fileIn = new FileInputStream(serFile);
                     ObjectInputStream in = new ObjectInputStream(fileIn);
                     RemainedLambda[] remainedLambdaArray = (RemainedLambda[]) in.readObject();
@@ -114,7 +117,7 @@ public class RemainedLambda implements Serializable
             }
             BufferedWriter writer = new BufferedWriter(new FileWriter(writeFile));
             writer.write("seq,project,file path,file name,lambda line number,introduced when file created,introduced url," +
-                    "present url,git diff,git log,introduced date,revisions from introduced, java files modified,commit link");
+                    "present url,git diff,git log,introduced date,revisions from introduced, java files modified,file link,commit link");
             int seq = 1;
             for (RemainedLambda remainedLambda : remainedLambdaList)
             {
@@ -122,6 +125,9 @@ public class RemainedLambda implements Serializable
 //                System.out.println(remainedLambda.lambdaContext);
                 writer.newLine();
                 int temp = remainedLambda.filePath.split("/").length;
+                MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+                messageDigest.update(remainedLambda.filePath.getBytes("UTF-8"));
+                String diffHash = Test.byte2Hex(messageDigest.digest());
                 String projectName = remainedLambda.commitURL.replace("https://github.com/", "").split("/commit")[0];
                 writer.write(seq + "," + projectName
                 + "," + remainedLambda.filePath + "," + remainedLambda.filePath.split("/")[temp - 1] + ","
@@ -129,12 +135,13 @@ public class RemainedLambda implements Serializable
                 + "https://github.com/" + projectName + "/blob/" + remainedLambda.introducedCommitHash + "/" + remainedLambda.filePath + "#L" + remainedLambda.beginLine + ","
                 + "https://github.com/" + projectName + "/blob/" + remainedLambda.NLaterCommitHash + "/" + remainedLambda.filePath + ","
                 + "git diff " + remainedLambda.introducedCommitHash + " " + remainedLambda.NLaterCommitHash + " " + remainedLambda.filePath + ","
-                + remainedLambda.gitCommand + "," + remainedLambda.introducedDate + "," + remainedLambda.revNumFromIntroduced + "," + remainedLambda.javaFilesModified + "," + remainedLambda.commitURL);
+                + remainedLambda.gitCommand + "," + remainedLambda.introducedDate + "," + remainedLambda.revNumFromIntroduced + "," + remainedLambda.javaFilesModified + ","
+                + remainedLambda.commitURL + "#diff-" + diffHash + "R" + remainedLambda.beginLine + "," + remainedLambda.commitURL);
                 seq += 1;
             }
             writer.flush();
             writer.close();
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
     }
