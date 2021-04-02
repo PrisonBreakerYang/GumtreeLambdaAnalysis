@@ -64,9 +64,7 @@ public class RemainedLambdaFinder
         this.timeThreshold = timeThreshold;
         this.filesThreshold = filesThreshold;
         this.initialCount = 0;
-        //List<String> javaPaths = getAllJavaFiles();
-        List<String> javaPaths = new ArrayList<>();
-        javaPaths.add("ambari-server/src/main/java/org/apache/ambari/server/controller/AmbariManagementControllerImpl.java");
+        List<String> javaPaths = getAllJavaFiles();
         findGoodLambdas(javaPaths, timeThreshold);
 
         repo.close();
@@ -411,8 +409,6 @@ public class RemainedLambdaFinder
                 if (mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos,
                         remainedLambda.endPos).get(0)) != null) //maybe we need to add more conditions here (looser)
                 {
-                    System.out.println("line 414: " + remainedLambda.commitURL + "#diff-26fd3431f36009ce1cbcc2497f91ba9615d3039b3d03740058b88e8df42acde8R"
-                            + remainedLambda.beginLine);
                     remainedLambda.introducedCommitHash = oldCommit.getName();
                     remainedLambda.NLaterCommitHash = latestCommit.getName();
                     remainedLambdas.add(remainedLambda);
@@ -562,23 +558,22 @@ public class RemainedLambdaFinder
             System.err.println("project " + project + " mining completed!");
             System.err.println("size of lambda list of " + project + ": " + finder.remainedLambdas.size());
 
-            //System.out.println(goodLambdaFinder.remainedLambdas.get(0).lambdaContext);
-//            RemainedLambda[] remainedLambdasForSerial = new RemainedLambda[finder.remainedLambdas.size()];
-//            finder.remainedLambdas.toArray(remainedLambdasForSerial);
-//            File file  = new File("ser/good-lambdas/test/" + ft.format(date));
-//            if (!file.exists())
-//            {
-//                file.mkdirs();
-//            }
-//            FileOutputStream fileOut = new FileOutputStream("ser/good-lambdas/test/" + ft.format(date) + "/" +
-//                    project.replace("/", " ") + "-onestep_T=100.ser");
-//            ObjectOutputStream serOut = new ObjectOutputStream(fileOut);
-//            serOut.writeObject(remainedLambdasForSerial);
-//            serOut.close();
-//            fileOut.close();
-//            System.err.println("Serialized data is saved in ser/good-lambdas/test/" + ft.format(date) + "/" +
-//                    project.replace("/", " ") + "-onestep_T=100.ser");
-//            System.out.println(finder.initialCount);
+            RemainedLambda[] remainedLambdasForSerial = new RemainedLambda[finder.remainedLambdas.size()];
+            finder.remainedLambdas.toArray(remainedLambdasForSerial);
+            File file  = new File("ser/good-lambdas/test/" + ft.format(date));
+            if (!file.exists())
+            {
+                file.mkdirs();
+            }
+            FileOutputStream fileOut = new FileOutputStream("ser/good-lambdas/test/" + ft.format(date) + "/" +
+                    project.replace("/", " ") + "-onestep_T=100.ser");
+            ObjectOutputStream serOut = new ObjectOutputStream(fileOut);
+            serOut.writeObject(remainedLambdasForSerial);
+            serOut.close();
+            fileOut.close();
+            System.err.println("Serialized data is saved in ser/good-lambdas/test/" + ft.format(date) + "/" +
+                    project.replace("/", " ") + "-onestep_T=100.ser");
+            System.out.println(finder.initialCount);
         }
     }
 }
