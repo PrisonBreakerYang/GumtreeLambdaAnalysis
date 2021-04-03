@@ -187,11 +187,11 @@ public class RemainedLambdaFinder
                     FileWriter oldFile, newFile;
 
                     try {
-                        oldFile = new FileWriter("old-new-file\\oldfile.java");
+                        oldFile = new FileWriter("old-new-file/oldfile.java");
                         oldFile.write("");
                         oldFile.write(fileBeforeCommit);    //i
                         oldFile.flush();
-                        newFile = new FileWriter("old-new-file\\newfile.java");
+                        newFile = new FileWriter("old-new-file/newfile.java");
                         newFile.write("");
                         newFile.write(fileAfterCommit);     //i + 1
                         newFile.flush();
@@ -250,7 +250,8 @@ public class RemainedLambdaFinder
                         //System.out.println(positionTupleListAfterCommit.size());
                         for (PositionTuple positionTuple : positionTupleListAfterCommit)
                         {
-                            if (newFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).size() == 0) continue;
+                            if (newFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).size() == 0)
+                                System.err.println("line 254 error!");
                             if (mappings.getSrcForDst(newFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).get(0)) == null
                                     && BadLambdaFinder.lambdaInEdits(positionTuple, BadLambdaFinder.getMergedEdits(editsInsertedOrReplaced), "B"))
                             {
@@ -388,11 +389,11 @@ public class RemainedLambdaFinder
         String fileLatestCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, latestCommit.getTree()).getObjectId(0)).getBytes());
         if (!fileLatestCommit.contains("->")) return;
         FileWriter oldFile, newFile;
-        oldFile = new FileWriter("old-new-file\\oldfile.java");
+        oldFile = new FileWriter("old-new-file/oldfile.java");
         oldFile.write("");
         oldFile.write(fileOldCommit);
         oldFile.flush();
-        newFile = new FileWriter("old-new-file\\newfile.java");
+        newFile = new FileWriter("old-new-file/newfile.java");
         newFile.write("");
         newFile.write(fileLatestCommit);
         newFile.flush();
@@ -406,7 +407,8 @@ public class RemainedLambdaFinder
 
             for (RemainedLambda remainedLambda : remainedLambdaCandidates) {
                 if (oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos, remainedLambda.endPos).size() == 0)
-                    continue;
+                    System.err.println("line 410 error!");
+                    //continue;
                 if (mappings.getDstForSrc(oldFileTree.getTreesBetweenPositions(remainedLambda.beginPos,
                         remainedLambda.endPos).get(0)) != null) //maybe we need to add more conditions here (looser)
                 {
@@ -426,21 +428,16 @@ public class RemainedLambdaFinder
 
     TwoTuple compareCommitWithAdjacent(RevCommit currentCommit, RevCommit nextCommit, TwoTuple positionOfCandidate, String javaPath) throws IOException {
         try {
-//            System.out.println("################################");
-//            System.out.println("current commit:" + currentCommit.getName());
-//            System.out.println("next commit:" + nextCommit.getName());
-//            System.out.println("java path:" + javaPath);
-            //System.out.println(positionOfCandidate.beginPos + "-" + positionOfCandidate.endPos);
             if (TreeWalk.forPath(repo, javaPath, currentCommit.getTree()) == null || TreeWalk.forPath(repo, javaPath, nextCommit.getTree()) == null) return null;
             String fileCurrentCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, currentCommit.getTree()).getObjectId(0)).getBytes());
             String fileNextCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, nextCommit.getTree()).getObjectId(0)).getBytes());
             if (!fileNextCommit.contains("->") || !fileCurrentCommit.contains("->")) return null;
             FileWriter oldFile, newFile;
-            oldFile = new FileWriter("old-new-file\\oldfile.java");
+            oldFile = new FileWriter("old-new-file/oldfile.java");
             oldFile.write("");
             oldFile.write(fileCurrentCommit);
             oldFile.flush();
-            newFile = new FileWriter("old-new-file\\newfile.java");
+            newFile = new FileWriter("old-new-file/newfile.java");
             newFile.write("");
             newFile.write(fileNextCommit);
             newFile.flush();
@@ -574,7 +571,7 @@ public class RemainedLambdaFinder
             fileOut.close();
             System.err.println("Serialized data is saved in ser/good-lambdas/test/" + ft.format(date) + "/" +
                     project.replace("/", " ") + "-onestep_T=100.ser");
-            System.out.println(finder.initialCount);
+            //System.out.println(finder.initialCount);
         }
     }
 }

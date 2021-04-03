@@ -78,17 +78,17 @@
         <dependency>
             <groupId>com.github.gumtreediff</groupId>
             <artifactId>core</artifactId>
-            <version>3.0.0-beta1</version>
+            <version>3.0.0-beta2</version>
         </dependency>
         <dependency>
             <groupId>com.github.gumtreediff</groupId>
             <artifactId>client</artifactId>
-            <version>3.0.0-beta1</version>
+            <version>3.0.0-beta2</version>
         </dependency>
         <dependency>
             <groupId>com.github.gumtreediff</groupId>
             <artifactId>gen.jdt</artifactId>
-            <version>3.0.0-beta1</version>
+            <version>3.0.0-beta2</version>
         </dependency>
         <dependency>
             <groupId>com.kennycason</groupId>
@@ -98,12 +98,12 @@
         <dependency>
             <groupId>com.kennycason</groupId>
             <artifactId>kumo-tokenizers</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-simple</artifactId>
-                </exclusion>
-            </exclusions>
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>org.slf4j</groupId>-->
+<!--                    <artifactId>slf4j-simple</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
             <version>1.28</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.kennycason/kumo -->
