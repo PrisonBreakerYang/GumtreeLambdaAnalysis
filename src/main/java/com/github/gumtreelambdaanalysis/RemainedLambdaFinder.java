@@ -17,11 +17,16 @@ import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.TreeRevFilter;
+import org.eclipse.jgit.revwalk.filter.AndRevFilter;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.AndTreeFilter;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
+import org.eclipse.jgit.treewalk.filter.PathFilterGroup;
+import org.eclipse.jgit.treewalk.filter.TreeFilter;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -40,6 +45,12 @@ public class RemainedLambdaFinder
     String repoName;
     int initialCount;
     private List<RemainedLambda> remainedLambdas = new ArrayList<>();
+
+    public RemainedLambdaFinder(Repository repo)
+    {
+        this.repo = repo;
+        this.git = null;
+    }
 
     public RemainedLambdaFinder(String url, String repoPath, int context, int timeThreshold, int filesThreshold) throws GitAPIException, IOException {
         assert url.endsWith(".git");
@@ -129,16 +140,36 @@ public class RemainedLambdaFinder
             int count = 1;
             RevCommit latestCommit = revWalk.parseCommit(repo.resolve(Constants.HEAD));
             for (String javaPath : javaPaths) {
+//                System.out.println(javaPath);
                 count++;
                 // if the current version of the file doesn't even have a "->", it can be excluded without doubt
                 String currentFile = new String(repo.open(TreeWalk.forPath(repo, javaPath, latestCommit.getTree()).getObjectId(0)).getBytes());
                 if (!currentFile.contains("->")) continue;
 
                 // if the oldest commit is still to near to now, it can be excluded
-                Iterable<RevCommit> revCommits = git.log().add(repo.resolve(Constants.HEAD)).addPath(javaPath).call();
+                //Iterable<RevCommit> revCommits = git.log().add(repo.resolve(Constants.HEAD)).addPath(javaPath).call();
+                RevWalk tempWalk = new RevWalk(repo);
+                RevCommit tempLatestCommit = tempWalk.parseCommit(repo.resolve(latestCommit.getName()));
+                tempWalk.markStart(tempLatestCommit);
+                //tempWalk.setRevFilter(RevFilter.NO_MERGES);
+                //tempWalk.setRevFilter(new TreeRevFilter(tempWalk, PathFilter.create(javaPath)));
+                tempWalk.setRevFilter(AndRevFilter.create(RevFilter.NO_MERGES, new TreeRevFilter(tempWalk, PathFilter.create(javaPath))));
+                tempWalk.setTreeFilter(AndTreeFilter.create(PathFilterGroup.createFromStrings(javaPath), TreeFilter.ANY_DIFF));
                 List<RevCommit> revCommitList = new ArrayList<>();
-                revCommits.forEach(revCommitList::add);
+                RevCommit nextCommit = tempWalk.next();
+                while ((nextCommit != null))
+                {
+                    assert nextCommit.getParentCount() <= 1;
+                    revCommitList.add(nextCommit);
+                    nextCommit = tempWalk.next();
+                }
+                //the last one is the initial commit, and the first one is the latest commit, i.e. current commit
+                //assert revCommitList.size() >= 1;
+                //System.out.println(revCommitList.size());
+                tempWalk.close();
+                // revCommits.forEach(revCommitList::add);
                 Collections.reverse(revCommitList);
+                //after reversion, the first one is the initial commit, and the last one is the latest commit, i.e. current commit
                 if (commitTimeTooNear(revCommitList.get(0).getCommitTime())) continue;
 
                 processRemainedLambdasForInitialCommit(revCommitList, javaPath);
@@ -162,8 +193,12 @@ public class RemainedLambdaFinder
                     int javaFilesModified = 0;
 
                     RevWalk tempRevWalk = new RevWalk(repo);
-                    tempRevWalk.setRevFilter(RevFilter.NO_MERGES);
-                    RevCommit parentCommit = tempRevWalk.parseCommit(repo.resolve(currentCommit.getName())).getParent(0);
+                    tempRevWalk.markStart(tempRevWalk.parseCommit(repo.resolve(latestCommit.getName())));
+                    //tempRevWalk.setRevFilter(RevFilter.NO_MERGES);
+                    tempRevWalk.setRevFilter(AndRevFilter.create(RevFilter.NO_MERGES, new TreeRevFilter(tempRevWalk, PathFilter.create(javaPath))));
+                    RevCommit resolvedCurrentCommit = tempRevWalk.parseCommit(repo.resolve(currentCommit.getName()));
+                    assert resolvedCurrentCommit.getParentCount() <= 1;
+                    RevCommit parentCommit = resolvedCurrentCommit.getParent(0);
 //            System.out.println(parentCommit.getName());
                     ByteArrayOutputStream tempOutputStream = new ByteArrayOutputStream();
                     DiffFormatter tempFormatter = new DiffFormatter(tempOutputStream);
@@ -251,7 +286,7 @@ public class RemainedLambdaFinder
                         for (PositionTuple positionTuple : positionTupleListAfterCommit)
                         {
                             if (newFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).size() == 0)
-                                System.err.println("line 254 error!");
+                                System.err.println("line 291 error!");
                             if (mappings.getSrcForDst(newFileTree.getTreesBetweenPositions(positionTuple.beginPos, positionTuple.endPos).get(0)) == null
                                     && BadLambdaFinder.lambdaInEdits(positionTuple, BadLambdaFinder.getMergedEdits(editsInsertedOrReplaced), "B"))
                             {
@@ -311,7 +346,7 @@ public class RemainedLambdaFinder
 
         //if this commit is not the initial commit and it changed too many java files
         RevCommit initialCommit = revCommitList.get(0);
-        assert initialCommit.getParentCount() == 0;
+        assert initialCommit.getParentCount() <= 1;
         String commitName = initialCommit.getName();
         RevCommit parentCommit;
         RevWalk revWalk = new RevWalk(repo);
@@ -428,7 +463,8 @@ public class RemainedLambdaFinder
 
     TwoTuple compareCommitWithAdjacent(RevCommit currentCommit, RevCommit nextCommit, TwoTuple positionOfCandidate, String javaPath) throws IOException {
         try {
-            if (TreeWalk.forPath(repo, javaPath, currentCommit.getTree()) == null || TreeWalk.forPath(repo, javaPath, nextCommit.getTree()) == null) return null;
+            //if (TreeWalk.forPath(repo, javaPath, currentCommit.getTree()) == null || TreeWalk.forPath(repo, javaPath, nextCommit.getTree()) == null) return null;
+            assert TreeWalk.forPath(repo, javaPath, currentCommit.getTree()) != null && TreeWalk.forPath(repo, javaPath, nextCommit.getTree()) != null;
             String fileCurrentCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, currentCommit.getTree()).getObjectId(0)).getBytes());
             String fileNextCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, nextCommit.getTree()).getObjectId(0)).getBytes());
             if (!fileNextCommit.contains("->") || !fileCurrentCommit.contains("->")) return null;
@@ -442,7 +478,7 @@ public class RemainedLambdaFinder
             newFile.write(fileNextCommit);
             newFile.flush();
 
-            //Run.initGenerators();
+//            Run.initGenerators();
 //            Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
 //            Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
             Tree oldFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/oldfile.java")).getRoot();
@@ -462,7 +498,19 @@ public class RemainedLambdaFinder
             newFile.close();
 
             if (result == null) return null;
-            else return new TwoTuple(result.getPos(), result.getEndPos());
+            else {
+//                Matcher defaultNodeMatcher = Matchers.getInstance().getMatcher();
+                Tree oldNodeTree = oldFileTree.getTreesBetweenPositions(positionOfCandidate.beginPos, positionOfCandidate.endPos).get(0);
+                Tree newNodeTree = result;
+//                MappingStore nodeMappings = defaultNodeMatcher.match(oldNodeTree, newNodeTree);
+//                EditScript actions = new SimplifiedChawatheScriptGenerator().computeActions(nodeMappings); // computes the edit script
+//                System.out.println("action size: " + actions.size());
+//                assert actions.size() != 0 || oldNodeTree.isIsomorphicTo(newNodeTree);
+                TwoTuple twoTuple = new TwoTuple(result.getPos(), result.getEndPos());
+                twoTuple.modified = !oldNodeTree.isIsomorphicTo(newNodeTree);
+                //System.out.println(twoTuple.modified);
+                return twoTuple;
+            }
         } catch (IndexOutOfBoundsException e)
         {
             System.out.println("begin pos and end pos" + positionOfCandidate.beginPos + "\t" + positionOfCandidate.endPos);
@@ -536,7 +584,7 @@ public class RemainedLambdaFinder
         }
         bf.close();
 
-        String[] projectList_test = {"apache/skywalking"};
+        String[] projectList_test = {"apache/hadoop"};
         //String[] projectList = lines.toArray(new String[0]);
         String[] projectList = projectList_test;
 

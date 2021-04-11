@@ -208,7 +208,6 @@ public class RemainedLambdaFeatureAnalysis
             String repoName = lambda.commitURL.replace("https://github.com/", "").split("apache/")[1].split("/commit")[0];
             //String[] sources = {"../repos/" + repoName + "/" + getSrcPath(lambda.filePath)};
             String[] sources = {""};
-            //String[] classpath = {"D:\\software\\jdk\\lib"};
             String[] classpath = {""};
             parser.setEnvironment(classpath, sources, new String[]{"UTF-8"}, true);
             Map<String, String> options = JavaCore.getDefaultOptions();
@@ -295,7 +294,6 @@ public class RemainedLambdaFeatureAnalysis
             String repoName = lambda.commitURL.replace("https://github.com/", "").split("apache/")[1].split("/commit")[0];
             //String[] sources = {"../repos/" + repoName + "/" + getSrcPath(lambda.filePath)};
             String[] sources = {""};
-            //String[] classpath = {"D:\\software\\jdk\\lib"};
             String[] classpath = {""};
             parser.setEnvironment(classpath, sources, new String[]{"UTF-8"}, true);
             Map<String, String> options = JavaCore.getDefaultOptions();
@@ -561,8 +559,8 @@ public class RemainedLambdaFeatureAnalysis
         List<RemainedLambda> remainedLambdaList = new ArrayList<>();
         //List<RemainedLambda> remainedLambdaFilteredList = new ArrayList<>();
         try {
-            String serPath = "ser\\good-lambdas\\test";
-            String[] paths = {serPath + "\\03-24", serPath + "\\03-25", serPath + "\\03-26", serPath + "\\03-27", serPath + "\\03-30"};
+            String serPath = "ser/good-lambdas/test";
+            String[] paths = {serPath + "/03-24", serPath + "/03-25", serPath + "/03-26", serPath + "/03-27", serPath + "/03-30"};
             //String[] paths = {serPath + "\\03-17"};
             for (String path : paths)
             {

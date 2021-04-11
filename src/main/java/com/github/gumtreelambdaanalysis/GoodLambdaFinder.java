@@ -32,13 +32,15 @@ import java.util.*;
 class TwoTuple
 {
     int beginPos, endPos;
+    boolean modified;
     public TwoTuple(int beginPos, int endPos)
     {
         this.beginPos = beginPos;
         this.endPos = endPos;
+        modified = false;
     }
 }
-
+@Deprecated
 public class GoodLambdaFinder
 {
     private final Repository repo;

@@ -1,5 +1,4 @@
 package com.github.gumtreelambdaanalysis;
-import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.gen.SyntaxException;
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
@@ -88,7 +87,7 @@ public class BadLambdaFinder {
         mergedEdits.add(editList.get(0));
         while (seq < editList.size())
         {
-            assert editList.get(seq).getType() == Edit.Type.DELETE || editList.get(seq).getType() == Edit.Type.REPLACE;
+//            assert editList.get(seq).getType() == Edit.Type.DELETE || editList.get(seq).getType() == Edit.Type.REPLACE;
             assert editList.get(seq).getBeginA() > editList.get(seq - 1).getEndA();
             if (editList.get(seq).getBeginA() == mergedEdits.get(mergedEdits.size() - 1).getEndA())
             {
@@ -341,16 +340,6 @@ public class BadLambdaFinder {
     }
 
     void walkAllCommits(Repository repo, String url, String repoPath) throws GitAPIException, IOException {
-//        String repoName = url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf(".git"));
-//        File branchRoot = new File(repoPath +"/.git/refs/heads");
-//        //The default branch name of some projects are not "master", we can get the proper name in the "heads" directory
-//        //To improve: https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/porcelain/ListBranches.java
-//        File[] branch = branchRoot.listFiles();
-//        assert branch != null;
-//        System.out.println(branch[0].toString());
-//        assert Objects.requireNonNull(branch).length == 1;
-        //String branch = "repos/" + repoName
-        //Ref head = repo.exactRef("refs/heads/" + branch[0].toString().split("\\\\")[7]);
         List<Ref> call = git.branchList().call();
         Ref head= call.get(0);
         System.out.println(head);

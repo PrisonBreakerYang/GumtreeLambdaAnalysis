@@ -1,10 +1,12 @@
 package com.github.gumtreelambdaanalysis;
 
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
+import com.github.gumtreediff.matchers.MappingStore;
+import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.Tree;
-import com.github.gumtreediff.tree.TreeMetrics;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.jdt.core.*;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
@@ -12,18 +14,50 @@ import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.RepositoryBuilder;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.AndTreeFilter;
+import org.eclipse.jgit.treewalk.filter.PathFilterGroup;
+import org.eclipse.jgit.treewalk.filter.TreeFilter;
 
 import java.io.*;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.github.gumtreelambdaanalysis.BadLambdaFinder.getMergedEdits;
+
+class AuthorInfo
+{
+    String createAuthor, removeAuthor;
+    String createLambdaLine, removeLambdaLine;
+    Integer numOfCommit;
+    public AuthorInfo(String createAuthor, String removeAuthor)
+    {
+        this.createAuthor = createAuthor;
+        this.removeAuthor = removeAuthor;
+    }
+    public void setCreateLambdaLine(String createLambdaLine)
+    {
+        this.createLambdaLine = createLambdaLine;
+    }
+    public void setRemoveLambdaLine(String removeLambdaLine)
+    {
+        this.removeLambdaLine = removeLambdaLine;
+    }
+    public void setNumOfCommit(Integer numOfCommit)
+    {
+        this.numOfCommit = numOfCommit;
+    }
+}
 
 public class RemovedLambdaFeatureAnalysis
 {
@@ -415,7 +449,6 @@ public class RemovedLambdaFeatureAnalysis
             String repoName = lambda.commitURL.replace("https://github.com/", "").split("apache/")[1].split("/commit")[0];
             //String[] sources = {"../repos/" + repoName + "/" + getSrcPath(lambda.filePath)};
             String[] sources = {""};
-            //String[] classpath = {"D:\\software\\jdk\\lib"};
             String[] classpath = {""};
             parser.setEnvironment(classpath, sources, new String[]{"UTF-8"}, true);
             Map<String, String> options = JavaCore.getDefaultOptions();
@@ -502,7 +535,6 @@ public class RemovedLambdaFeatureAnalysis
             String repoName = lambda.commitURL.replace("https://github.com/", "").split("apache/")[1].split("/commit")[0];
             //String[] sources = {"../repos/" + repoName + "/" + getSrcPath(lambda.filePath)};
             String[] sources = {""};
-            //String[] classpath = {"D:\\software\\jdk\\lib"};
             String[] classpath = {""};
             parser.setEnvironment(classpath, sources, new String[]{"UTF-8"}, true);
             Map<String, String> options = JavaCore.getDefaultOptions();
@@ -544,7 +576,9 @@ public class RemovedLambdaFeatureAnalysis
 //                                        else {
                                             String className = methodInvocation.resolveMethodBinding().getDeclaringClass().getName();
                                             //className = className.replaceAll("<(.*?)>", "").replaceAll(">", "");
-                                            String methodFullName = pack + "." + className + "." + methodInvocation.resolveMethodBinding().getName();
+                                            String methodFullName = pack + "." + className + "." + methodInvocation.resolveMethodBinding();
+                                            //String methodFullName = methodInvocation.resolveTypeBinding().getBinaryName();
+                                            System.out.println(methodFullName);
                                             addStringToMap(methodFullNameFreq, methodFullName);
 //                                        }
                                     }
@@ -634,7 +668,7 @@ public class RemovedLambdaFeatureAnalysis
             boolean found = false;
             for (PositionTuple positionTuple : positionTuples)
             {
-                if (positionTuple.beginLine == lambda.beginLine && positionTuple.endLine == lambda.endLine)
+                if (positionTuple.beginLine == lambda.beginLine && positionTuple.endLine == lambda.endLine && positionTuple.node.toString().equals(lambda.node))
                 {
                     found = true;
                     LambdaExpression lambdaNode = positionTuple.node;
@@ -762,8 +796,9 @@ public class RemovedLambdaFeatureAnalysis
         List<SimplifiedModifiedLambda> simplifiedModifiedLambdaList = new ArrayList<>();
         List<SimplifiedModifiedLambda> lambdasNotInDeletedEdit = new ArrayList<>();
         try {
-            String serPath = "ser\\bad-lambdas\\test";
-            String[] paths = {serPath + "\\03-15", serPath + "\\03-16", serPath + "\\03-17", serPath + "\\03-18"};
+            String serPath = "ser/bad-lambdas/test";
+            //String[] paths = {serPath + "\\03-15", serPath + "\\03-16", serPath + "\\03-17", serPath + "\\03-18"};
+            String[] paths = {serPath + "/04-05"};
             for (String path : paths)
             {
                 File file = new File(path);
@@ -788,7 +823,7 @@ public class RemovedLambdaFeatureAnalysis
 
             SimplifiedModifiedLambda[] lambdasNotInDeletedEditArray = new SimplifiedModifiedLambda[lambdasNotInDeletedEdit.size()];
             lambdasNotInDeletedEdit.toArray(lambdasNotInDeletedEditArray);
-            FileOutputStream fileOut = new FileOutputStream("ser/bad-lambdas/" + "51repos-filtered.ser");
+            FileOutputStream fileOut = new FileOutputStream("ser/bad-lambdas/" + "51repos-filtered-without-edit-limit.ser");
             ObjectOutputStream serOut = new ObjectOutputStream(fileOut);
             serOut.writeObject(lambdasNotInDeletedEditArray);
             serOut.close();
@@ -805,20 +840,262 @@ public class RemovedLambdaFeatureAnalysis
             e.printStackTrace();
         }
     }
-    public static void main(String[] args) throws IOException, CoreException, ClassNotFoundException {
+
+    public static String linkToJiraIssue(SimplifiedModifiedLambda lambda)
+    {
+        String msg = lambda.commitMessage.toUpperCase().strip();
+        String repoName = lambda.commitURL.split("apache/")[1].split("/commit")[0].toUpperCase();
+        try {
+            if (msg.startsWith(repoName)) {
+                String formatted = msg.split(" ")[0].split(":")[0].split("\\.")[0].split(",")[0]
+                        .split(";")[0].split("\n")[0].split("/")[0].replace("_", "-");
+
+                if (!formatted.contains("-")) return "FALSE";
+                if (!StringUtils.isNumeric(formatted.split("-")[1])) return "FALSE";
+                if (!formatted.split("-")[0].equals(repoName) || !StringUtils.isNumeric(formatted.split("-")[1])) {
+                    System.out.println("################");
+                    System.out.println(formatted);
+                    System.out.println(lambda.commitURL);
+                    System.out.println(lambda.commitMessage);
+                }
+                return "https://issues.apache.org/jira/browse/" + formatted;
+            }
+            if (msg.startsWith("[" + repoName))
+            {
+                String formatted = msg.substring(1, msg.indexOf("]")).split(",")[0];
+                if (!formatted.contains("-")) return "FALSE";
+                if (!StringUtils.isNumeric(formatted.split("-")[1])) return "FALSE";
+                if (!formatted.split("-")[0].equals(repoName) || !StringUtils.isNumeric(formatted.split("-")[1])) {
+                    System.out.println("################");
+                    System.out.println(formatted);
+                    System.out.println(lambda.commitURL);
+                    System.out.println(lambda.commitMessage);
+                }
+                return "https://issues.apache.org/jira/browse/" + formatted;
+            }
+
+            Pattern r = Pattern.compile("[A-Z]+-\\d+");
+            Matcher m = r.matcher(msg);
+            if (m.find() && m.start() < 2)
+            {
+                return "https://issues.apache.org/jira/browse/" + m.group(0);
+            }
+            //System.out.println(msg.substring(0, Integer.min(15, msg.length())));
+
+        }catch (ArrayIndexOutOfBoundsException e)
+        {
+            System.err.println("ERROR: " + lambda.commitURL);
+        }
+        return "FALSE";
+//        if (msg.startsWith("[" + repoName.toUpperCase()))
+
+    }
+
+    public static String msgKeyword(SimplifiedModifiedLambda lambda)
+    {
+        String rawMsg = lambda.commitMessage.toLowerCase().strip();
+        String stemmedMsg = CommitMsgAnalysis.msgProcess(rawMsg);
+        String[] keywords = {"lambda", "lamda", "lamba", "bug", "fix", "issue", "problem", "abuse", "error", "performance", "optimize", "efficiency", "simplify"};
+        String[] stemmedKeywords = {"issu", "perf", "perform", "optim", "effici", "simplifi"};
+
+        for (String keyword : keywords)
+        {
+            if (rawMsg.contains(keyword)) return keyword;
+        }
+        for (String stemmedKeyword : stemmedKeywords)
+        {
+            for (String token : stemmedMsg.split(" "))
+            {
+                if (token.equals(stemmedKeyword)) return stemmedKeyword;
+            }
+        }
+        return "FALSE";
+    }
+
+    static AuthorInfo lambdaEvolutionAnalysis(List<RevCommit> revCommitList, Set<String> otherDeveloperModifiedLambdaSet,
+                                              TwoTuple removedLambdaPos, String javaPath, Repository repo) throws IOException {
+        int commitCount = 0;
+        TwoTuple lastLambdaPos;
+        RemainedLambdaFinder finder = new RemainedLambdaFinder(repo);
+        TwoTuple positionOfCandidate = new TwoTuple(removedLambdaPos.beginPos, removedLambdaPos.endPos);
+        //at i=0, the lambda is removed
+
+        if (revCommitList.size() == 2)
+        {
+            lastLambdaPos = finder.compareCommitWithAdjacent(revCommitList.get(0), revCommitList.get(1), positionOfCandidate, javaPath);
+            //assert lastLambdaPos != null;
+            //System.err.println("revCommitList.size is 2");
+            AuthorInfo authorInfo = new AuthorInfo(revCommitList.get(1).getAuthorIdent().getName(), revCommitList.get(0).getAuthorIdent().getName());
+            authorInfo.setNumOfCommit(1); //removed after i commits
+            return authorInfo;
+        }
+        for (int i = 1; i < revCommitList.size() - 1; i++)
+        {
+            //lastLambdaPos = compareBetweenTwoCommits(revCommitList.get(i), revCommitList.get(i+1), removedLambdaPos, javaPath, repo);
+            lastLambdaPos = finder.compareCommitWithAdjacent(revCommitList.get(i), revCommitList.get(i + 1), positionOfCandidate, javaPath);
+            positionOfCandidate = lastLambdaPos;
+            //System.out.println(i);
+
+            if (lastLambdaPos == null)
+            {
+                //this lambda is created in commit i
+                AuthorInfo authorInfo = new AuthorInfo(revCommitList.get(i).getAuthorIdent().getName(), revCommitList.get(0).getAuthorIdent().getName());
+                authorInfo.setNumOfCommit(i); //removed after i commits
+                return authorInfo;
+            }
+            else
+            {
+                if (i == revCommitList.size() - 2)
+                {
+                    AuthorInfo authorInfo = new AuthorInfo(revCommitList.get(i + 1).getAuthorIdent().getName(), revCommitList.get(0).getAuthorIdent().getName());
+                    authorInfo.setNumOfCommit(i + 1);
+                    return authorInfo;
+                }
+                //System.out.println(lastLambdaPos.beginPos + "-" + lastLambdaPos.endPos);
+                //this lambda is not created in commit i
+                commitCount ++;
+                if (lastLambdaPos.modified) {
+                    //System.out.println("modified");
+                    otherDeveloperModifiedLambdaSet.add(revCommitList.get(i).getAuthorIdent().getName());
+                }
+            }
+        }
+        return null;
+    }
+
+    static TwoTuple compareBetweenTwoCommits(RevCommit currentCommit, RevCommit parentCommit, TwoTuple removedLambdaPos, String javaPath, Repository repo) throws IOException {
+        assert (TreeWalk.forPath(repo, javaPath, currentCommit.getTree()) != null && TreeWalk.forPath(repo, javaPath, parentCommit.getTree()) == null);
+        String fileCurrentCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, currentCommit.getTree()).getObjectId(0)).getBytes());
+        String fileParentCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, parentCommit.getTree()).getObjectId(0)).getBytes());
+        if (!fileParentCommit.contains("->") || !fileCurrentCommit.contains("->")) return null;
+        FileWriter currentFile, parentFile;
+        currentFile = new FileWriter("old-new-file/oldfile.java");
+        currentFile.write("");
+        currentFile.write(fileCurrentCommit);
+        currentFile.flush();
+        parentFile = new FileWriter("old-new-file/newfile.java");
+        parentFile.write("");
+        parentFile.write(fileParentCommit);
+        parentFile.flush();
+
+        //Run.initGenerators();
+//            Tree oldFileTree = TreeGenerators.getInstance().getTree("old-new-file\\oldfile.java").getRoot();
+//            Tree newFileTree = TreeGenerators.getInstance().getTree("old-new-file\\newfile.java").getRoot();
+        Tree currentFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/oldfile.java")).getRoot();
+        Tree parentFileTree = new JdtTreeGenerator().generate(new FileReader("old-new-file/newfile.java")).getRoot();
+
+        com.github.gumtreediff.matchers.Matcher defaultMatcher = Matchers.getInstance().getMatcher();
+        MappingStore mappings = defaultMatcher.match(currentFileTree, parentFileTree);
+
+        Tree result;
+        assert currentFileTree.getTreesBetweenPositions(removedLambdaPos.beginPos, removedLambdaPos.endPos).size() > 0;
+        if (currentFileTree.getTreesBetweenPositions(removedLambdaPos.beginPos, removedLambdaPos.endPos).size() == 0)
+        {
+            result = null;
+        }
+        else result = mappings.getDstForSrc(currentFileTree.getTreesBetweenPositions(removedLambdaPos.beginPos, removedLambdaPos.endPos).get(0));
+        //System.out.println("new pos:" + result.getPos() + "\t" + result.getEndPos());
+        currentFile.close();
+        parentFile.close();
+        if (result == null) return null;
+        else return new TwoTuple(result.getPos(), result.getEndPos());
+    }
+    static void authorAnalysis(List<SimplifiedModifiedLambda> lambdas) throws IOException, GitAPIException {
+        for (SimplifiedModifiedLambda lambda : lambdas)
+        {
+            String repoName = lambda.commitURL.split("apache/")[1].split("/commit")[0];
+            String commitHash = lambda.commitURL.split("/commit/")[1];
+            String javaPath = lambda.filePath;
+            try (Repository repo = new RepositoryBuilder().setGitDir(new File("../repos/" + repoName + "/.git")).build())
+            {
+                try (RevWalk walk = new RevWalk(repo))
+                {
+                    RevCommit currentCommit = walk.parseCommit(repo.resolve(commitHash));
+                    List<PositionTuple> positionTupleListBeforeCommit = new ArrayList<>();
+//                    System.out.println(currentCommit.getParent(0).getName());
+//                    System.out.println(currentCommit.getParent(0).getTree());
+                    RevCommit parentCommit = walk.parseCommit(currentCommit.getParent(0).getId());
+//                    System.out.println(parentCommit.getTree());
+//                    System.out.println(TreeWalk.forPath(repo, javaPath, currentCommit.getParent(0).getTree()));
+                    String fileBeforeCommit = new String(repo.open(TreeWalk.forPath(repo, javaPath, parentCommit.getTree()).getObjectId(0)).getBytes());
+                    GumtreeJDTDriver gumtreeJDTDriver = new GumtreeJDTDriver(fileBeforeCommit, positionTupleListBeforeCommit, true);
+                    boolean found = false;
+                    int beginPos = 0, endPos = 0;
+                    for (PositionTuple positionTuple : positionTupleListBeforeCommit)
+                    {
+                        if (positionTuple.beginLine == lambda.beginLine && positionTuple.endLine == lambda.endLine && positionTuple.node.toString().equals(lambda.node))
+                        {
+                            found = true;
+                            beginPos = positionTuple.beginPos;
+                            endPos = positionTuple.endPos;
+                            break;
+                        }
+                    }
+                    assert found;
+                    walk.markStart(currentCommit);
+                    walk.setRevFilter(RevFilter.NO_MERGES);
+                    //walk.setRevFilter(new TreeRevFilter(walk, PathFilter.create(javaPath)));
+                    //walk.setRevFilter(new TreeRevFilter(walk, TreeFilter.ANY_DIFF));
+                    walk.setTreeFilter(AndTreeFilter.create(PathFilterGroup.createFromStrings(javaPath), TreeFilter.ANY_DIFF));
+                    //System.out.println(currentCommit.getName());
+                    List<RevCommit> revCommitList = new ArrayList<>();
+                    RevCommit nextCommit = walk.next();
+                    System.out.println("latest commit: " + currentCommit.getName());
+                    System.out.println("next commit: " + nextCommit.getName());
+                    //revCommitList.add(nextCommit);
+                    while ((nextCommit != null))
+                    {
+                        revCommitList.add(nextCommit);
+                        //System.out.println(nextCommit.getName());
+                        nextCommit = walk.next();
+                    }
+                    //the last one is the initial commit, and the first one is the latest commit, i.e. current commit
+                    assert revCommitList.size() >= 2;
+
+                    TwoTuple positionOfCandidate = new TwoTuple(beginPos, endPos);
+                    Set<String> otherDeveloperModifiedLambdaSet = new HashSet<>();
+                    AuthorInfo authorInfo = lambdaEvolutionAnalysis(revCommitList, otherDeveloperModifiedLambdaSet, positionOfCandidate, javaPath, repo);
+                    //if (revCommitList.size() == 2) System.err.println("revCommitList size is 2!");
+                    assert authorInfo != null;
+                    otherDeveloperModifiedLambdaSet.remove(authorInfo.createAuthor);
+                    otherDeveloperModifiedLambdaSet.remove(authorInfo.removeAuthor);
+                    authorInfo.setRemoveLambdaLine(getLambdaLineUrl(lambda.commitURL, lambda.filePath, lambda.beginLine, "remove"));
+                    authorInfo.setCreateLambdaLine(getLambdaLineUrl(lambda.commitURL.substring(0, lambda.commitURL.lastIndexOf("/") + 1) +
+                            revCommitList.get(authorInfo.numOfCommit).getName(), lambda.filePath, 1, "create"));
+
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    static String getLambdaLineUrl(String commitURL, String filePath, int beginLine, String removeOrCreate) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        messageDigest.update(filePath.getBytes("UTF-8"));
+        String diffHash = Test.byte2Hex(messageDigest.digest());
+        assert removeOrCreate.equals("remove") || removeOrCreate.equals("create");
+        String leftOrRight = removeOrCreate.equals("remove") ? "L" : "R";
+        return commitURL + "#diff-" + diffHash + leftOrRight + beginLine;
+    }
+
+    public static void main(String[] args) throws IOException, CoreException, ClassNotFoundException, GitAPIException {
         //filterLambdasInDeleteEdit();
-        FileInputStream fileIn = new FileInputStream("ser/bad-lambdas/51repos-filtered.ser");
+        FileInputStream fileIn = new FileInputStream("ser/bad-lambdas/51repos-filtered-without-edit-limit.ser");
         ObjectInputStream in = new ObjectInputStream(fileIn);
         SimplifiedModifiedLambda[] simplifiedModifiedLambdaArray = (SimplifiedModifiedLambda[]) in.readObject();
         List<SimplifiedModifiedLambda> simplifiedModifiedLambdaList = new ArrayList<>(new ArrayList<>(Arrays.asList(simplifiedModifiedLambdaArray)));
         List<SimplifiedModifiedLambda> filteredLambdaList = new ArrayList<>();
         double threshold = 0.5;
+        Map<String, Set<Integer>> lambdaLinesInsideEditMap = Test.removedLambdaLinesInsideEdit(simplifiedModifiedLambdaList);
         for (SimplifiedModifiedLambda simplifiedModifiedLambda : simplifiedModifiedLambdaList)
         {
-            double proportion = (double) (Integer.min(simplifiedModifiedLambda.editEndLine, simplifiedModifiedLambda.endLine) - simplifiedModifiedLambda.beginLine + 1) / (simplifiedModifiedLambda.editEndLine - simplifiedModifiedLambda.editBeginLine + 1);
+            double proportion = (double)lambdaLinesInsideEditMap.get(Test.getEditPos(simplifiedModifiedLambda)).size() /
+                    (double) (simplifiedModifiedLambda.editEndLine - simplifiedModifiedLambda.editBeginLine + 1);
             if (proportion >= threshold) filteredLambdaList.add(simplifiedModifiedLambda);
         }
         //System.out.println(filteredLambdaList.size());
-        methodInvocationAnalysis(filteredLambdaList);
+        authorAnalysis(filteredLambdaList);
+        //methodInvocationAnalysis(filteredLambdaList);
     }
 }

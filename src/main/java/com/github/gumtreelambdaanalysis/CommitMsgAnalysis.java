@@ -249,12 +249,13 @@ public class CommitMsgAnalysis
     }
     public static void main(String[] args) throws IOException, GitAPIException {
         repoSet = new HashSet<>();
-        String serPath = "ser/bad-lambdas/test/";
+        String serPath = "ser/bad-lambdas";
         String writePath = "statistics/commit-message-analysis";
         List<SimplifiedModifiedLambda> removedLambdaList = new ArrayList<>();
 
         try {
-            String[] readPath = {serPath + "03-15", serPath + "03-16", serPath + "03-17", serPath + "03-18"};
+            //String[] readPath = {serPath + "03-15", serPath + "03-16", serPath + "03-17", serPath + "03-18"};
+            String[] readPath = {serPath};
             for (String path : readPath)
             {
                 File file = new File(path);
@@ -262,7 +263,7 @@ public class CommitMsgAnalysis
                 assert fileList != null;
                 for (File serFile : fileList)
                 {
-                    if (!serFile.toString().endsWith(".ser")) continue;
+                    if (!serFile.toString().endsWith("51repos-filtered-without-edit-limit.ser")) continue;
                     FileInputStream fileIn = new FileInputStream(serFile);
                     ObjectInputStream in = new ObjectInputStream(fileIn);
                     SimplifiedModifiedLambda[] removedLambdaArray = (SimplifiedModifiedLambda[]) in.readObject();
@@ -277,7 +278,7 @@ public class CommitMsgAnalysis
 
         removedLambdaList.removeIf(lambda -> lambda.commitMessage.contains("This reverts commit"));
         removedLambdaList = removeDuplicateCommits(removedLambdaList);
-        File txt = new File("statistics/msg-and-url-of-removed-lambdas-51repos-contains-lambda.txt");
+        File txt = new File("statistics/msg-and-url-of-removed-lambdas-51repos-without-edit-limit.txt");
         BufferedWriter writer = new BufferedWriter(new FileWriter(txt));
 
         for (SimplifiedModifiedLambda lambda : removedLambdaList)
@@ -285,10 +286,10 @@ public class CommitMsgAnalysis
             //if (lambda.javaFileModified > 10) continue;
             //if (lambda.commitMessage.contains("This reverts commit")) continue;
             repoSet.add(lambda.commitURL.split("/")[4]);
-            if (!lambda.commitMessage.contains("lambda")) continue;
-            writer.write(msgProcess(lambda.commitMessage));
+            //if (!lambda.commitMessage.contains("lambda")) continue;
             //writer.write(msgProcess(lambda.commitMessage));
-            //writer.write(lambda.commitURL + "\t\t" + lambda.commitMessage.replaceAll("\n", " "));
+            //writer.write(msgProcess(lambda.commitMessage));
+            writer.write(lambda.commitURL + "\t\t" + msgProcess(lambda.commitMessage));
             writer.newLine();
         }
         writer.flush();
