@@ -5,4 +5,4 @@ mvn clean
 mvn compile
 mvn package
 
-java -ea -cp ${CLASSPATH} {APP_MAINCLASS}
+java -ea -cp ${CLASSPATH} ${APP_MAINCLASS}

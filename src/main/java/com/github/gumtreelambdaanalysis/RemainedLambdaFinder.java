@@ -81,36 +81,6 @@ public class RemainedLambdaFinder
         repo.close();
     }
 
-//    void walkAllCommits(Repository repo, String url)throws GitAPIException, IOException
-//    {
-//        List<Ref> call = git.branchList().call();
-//        Ref head= call.get(0);
-//        System.out.println(head);
-//        assert call.size() == 1;
-//        RevWalk walk = new RevWalk(repo);
-//        RevCommit commit = walk.parseCommit(head.getObjectId());
-//        System.out.println("Start commit: " + commit);
-//        System.out.println("Walking all commits starting at HEAD");
-//        walk.markStart(commit);
-//        walk.setRevFilter(RevFilter.NO_MERGES);
-//        int count = 0;
-//        for (RevCommit currentCommit : walk) {
-//            if (currentCommit.getParentCount() == 0) {
-//                // this is the initial commit of the repo
-//                break;
-//            } else {
-//                //if (currentCommit.getParents().length > 1) System.out.println(currentCommit.getParents().length + "\n" + currentCommit.getName());
-//                for (RevCommit parentCommit : currentCommit.getParents()) {
-//                    gumTreeDiffWithParent(currentCommit, parentCommit, url);
-//                }
-//            }
-//
-//            count++;
-//        }
-//        walk.dispose();
-//    }
-
-
     List<String> getAllJavaFiles() throws IOException
     {
         Ref head = repo.findRef("HEAD");
@@ -168,6 +138,7 @@ public class RemainedLambdaFinder
                 //System.out.println(revCommitList.size());
                 tempWalk.close();
                 // revCommits.forEach(revCommitList::add);
+                if (revCommitList.size() == 0) continue;
                 Collections.reverse(revCommitList);
                 //after reversion, the first one is the initial commit, and the last one is the latest commit, i.e. current commit
                 if (commitTimeTooNear(revCommitList.get(0).getCommitTime())) continue;

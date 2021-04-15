@@ -94,13 +94,13 @@ public class RemainedLambda implements Serializable
 
     public static void deserializeGoodLambdas()
     {
-        String writePath = "statistics/" + "remained-lambdas-list/test/";
-        String serPath = "ser/good-lambdas/test/";
-        File writeFile = new File( writePath + "skywalking-beta2.csv");
+        String writePath = "statistics/" + "remained-lambdas-list/remote/";
+        String serPath = "ser/good-lambdas/remote";
+        File writeFile = new File( writePath + "data-of-103repos.csv");
         List<RemainedLambda> remainedLambdaList = new ArrayList<>();
         try {
             //String[] readPath = {serPath + "\\03-24", serPath + "\\03-25", serPath + "\\03-26", serPath + "\\03-27", serPath + "\\03-30"};
-            String[] readPath = {"C:\\Users\\28902\\Desktop\\最近常用\\temp"};
+            String[] readPath = {serPath};
             for (String path : readPath)
             {
                 File file = new File(path);
@@ -108,7 +108,7 @@ public class RemainedLambda implements Serializable
                 assert fileList != null;
                 for (File serFile : fileList)
                 {
-                    if (!serFile.toString().endsWith("beta2.ser")) continue;
+                    if (!serFile.toString().endsWith(".ser")) continue;
                     FileInputStream fileIn = new FileInputStream(serFile);
                     ObjectInputStream in = new ObjectInputStream(fileIn);
                     RemainedLambda[] remainedLambdaArray = (RemainedLambda[]) in.readObject();

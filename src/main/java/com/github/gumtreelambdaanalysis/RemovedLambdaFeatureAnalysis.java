@@ -304,6 +304,7 @@ public class RemovedLambdaFeatureAnalysis
                     {
                         TypeDeclaration typeDeclaration = (TypeDeclaration)parentNode;
                         addStringToMap(classNameFreq, typeDeclaration.getName().toString());
+                        System.out.println("####################");
                         for (Object superInterface : typeDeclaration.superInterfaceTypes())
                         {
                             if (superInterface.toString().equals("Serializable"))
@@ -339,9 +340,6 @@ public class RemovedLambdaFeatureAnalysis
     {
         Map<String, Integer> functionNameFreq = new HashMap<>();
         Map<String, Integer> locationOfLambda = new HashMap<>();
-//        locationOfLambda.put("MethodDeclaration", 0);
-//        locationOfLambda.put("FieldDeclaration", 0);
-//        locationOfLambda.put("Initializer", 0);
         for (SimplifiedModifiedLambda lambda : lambdas) {
             String fileBeforeCommit = getSourceCode(lambda);
             List<PositionTuple> positionTuples = new ArrayList<>();
@@ -360,28 +358,15 @@ public class RemovedLambdaFeatureAnalysis
                     }
                     addStringToMap(locationOfLambda, ASTNode.nodeClassForType(parentNode.getNodeType()).getName());
                     break;
-//                    if (parentNode instanceof MethodDeclaration) {
-//                        //printLambdaInfo(lambda);
-//                        MethodDeclaration methodDeclaration = (MethodDeclaration)parentNode;
-//                        if (!functionNameFreq.containsKey(methodDeclaration.getName().toString()))
-//                        {
-//                            functionNameFreq.put(methodDeclaration.getName().toString(), 1);
-//                        }
-//                        else
-//                        {
-//                            functionNameFreq.put(methodDeclaration.getName().toString(),
-//                            functionNameFreq.get(methodDeclaration.getName().toString()) + 1);
-//                        }
-//                        //System.out.println(methodDeclaration.getName());
-//                    }
                 }
             }
+            assert found;
         }
         locationOfLambda.entrySet().stream().sorted(Map.Entry.<String, Integer>comparingByValue()).forEach(System.out::println);
         //System.out.println("number of lambdas in functions: " + locationOfLambda.size());
     }
 
-    @Deprecated
+
     static void stateAnalysis(List<SimplifiedModifiedLambda> lambdas)
     {
         //hard to implement!
@@ -401,13 +386,6 @@ public class RemovedLambdaFeatureAnalysis
                     {
                         parentNode = parentNode.getParent();
                     }
-                    parentNode.accept(new ASTVisitor() {
-                        @Override
-                        public boolean visit(VariableDeclarationExpression node) {
-                            System.out.println(node);
-                            return true;
-                        }
-                    });
                     ASTNode body = lambdaExpression.getBody();
                     body.accept(new ASTVisitor() {
                         @Override
@@ -449,7 +427,7 @@ public class RemovedLambdaFeatureAnalysis
             String repoName = lambda.commitURL.replace("https://github.com/", "").split("apache/")[1].split("/commit")[0];
             //String[] sources = {"../repos/" + repoName + "/" + getSrcPath(lambda.filePath)};
             String[] sources = {""};
-            String[] classpath = {""};
+            String[] classpath = {"D:/software/jdk/lib"};
             parser.setEnvironment(classpath, sources, new String[]{"UTF-8"}, true);
             Map<String, String> options = JavaCore.getDefaultOptions();
             options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_14);
@@ -520,23 +498,24 @@ public class RemovedLambdaFeatureAnalysis
     }
 
     static void methodInvocationAnalysis(List<SimplifiedModifiedLambda> lambdas) {
-        Map<String, Integer> methodFullNameFreq = new HashMap<>();
-        methodFullNameFreq.put("self defined", 0);
-        int lambdaCount = 0;
-        int methodInvocationCount = 0;
+//        Map<String, Integer> methodFullNameFreq = new HashMap<>();
+//        methodFullNameFreq.put("self defined", 0);
+        final int[] lambdaCount = {0};
+        final int[] nonNullBinding = {0};
         for (SimplifiedModifiedLambda lambda : lambdas) {
             String fileBeforeCommit = getSourceCode(lambda);
             ASTParser parser = ASTParser.newParser(AST.JLS14);
             parser.setResolveBindings(true); // we need bindings later on
             parser.setKind(ASTParser.K_COMPILATION_UNIT);
             parser.setBindingsRecovery(true);
-            String unitName = lambda.commitURL + ":" + lambda.filePath;
-            parser.setUnitName(unitName);
+            //String unitName = lambda.commitURL + ":" + lambda.filePath;
             String repoName = lambda.commitURL.replace("https://github.com/", "").split("apache/")[1].split("/commit")[0];
-            //String[] sources = {"../repos/" + repoName + "/" + getSrcPath(lambda.filePath)};
-            String[] sources = {""};
-            String[] classpath = {""};
-            parser.setEnvironment(classpath, sources, new String[]{"UTF-8"}, true);
+            parser.setUnitName(lambda.filePath);
+//            String[] sources = Utils.getSourcePaths("../repos/aries");
+            String[] sources = {};
+//            System.out.println(Arrays.toString(sources));
+            String[] classpath = Utils.getJarPaths();
+            parser.setEnvironment(classpath, sources, null, true);
             Map<String, String> options = JavaCore.getDefaultOptions();
             options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_14);
             parser.setCompilerOptions(options);
@@ -547,63 +526,31 @@ public class RemovedLambdaFeatureAnalysis
             List<PositionTuple> positionTuples = new ArrayList<>();
             GumtreeJDTDriver driver = new GumtreeJDTDriver(fileBeforeCommit, positionTuples, true);
             for (PositionTuple positionTuple : positionTuples) {
-                if (positionTuple.beginLine == lambda.beginLine && positionTuple.endLine == lambda.endLine && positionTuple.node.toString().equals(lambda.node)) {
-                    ASTNode parentNode = positionTuple.node.getParent();
-                    lambdaCount ++;
-                    if (parentNode instanceof MethodInvocation)
-                    {
-                        methodInvocationCount ++;
-                        cu.accept(new ASTVisitor() {
-                            @Override
-                            public boolean visit(LambdaExpression node) {
-//                                if (node.getParent().getStartPosition() == parentNode.getStartPosition() &&
-//                                        node.getParent().toString().equals(parentNode.toString()))
-                                if (node.getStartPosition() == positionTuple.node.getStartPosition())
-                                //if ()
-                                {
-                                    MethodInvocation methodInvocation = (MethodInvocation)(node.getParent());
-                                    IMethodBinding binding = methodInvocation.resolveMethodBinding();
-                                    if (binding == null || !binding.getDeclaringClass().getPackage().toString().split(" ")[1].startsWith("java"))
-                                    {
-                                        methodFullNameFreq.put("self defined", methodFullNameFreq.get("self defined") + 1);
-                                    }
-                                    else {
-                                        String pack = binding.getDeclaringClass().getPackage().toString().split(" ")[1];
-//                                        if (!pack.startsWith("java"))
-//                                        {
-//                                            methodFullNameFreq.put("self defined", methodFullNameFreq.get("self defined") + 1);
-//                                        }
-//                                        else {
-                                            String className = methodInvocation.resolveMethodBinding().getDeclaringClass().getName();
-                                            //className = className.replaceAll("<(.*?)>", "").replaceAll(">", "");
-                                            String methodFullName = pack + "." + className + "." + methodInvocation.resolveMethodBinding();
-                                            //String methodFullName = methodInvocation.resolveTypeBinding().getBinaryName();
-                                            System.out.println(methodFullName);
-                                            addStringToMap(methodFullNameFreq, methodFullName);
-//                                        }
-                                    }
-                                }
-                                return true;
+                if (!(positionTuple.beginLine == lambda.beginLine && positionTuple.node.toString().equals(lambda.node))) continue;
+//                lambdaCount ++;
+                cu.accept(new ASTVisitor() {
+                    @Override
+                    public boolean visit(LambdaExpression node) {
+                        if (node.getStartPosition() == positionTuple.node.getStartPosition() && positionTuple.node.getParent() instanceof MethodInvocation)
+                        {
+                            lambdaCount[0]++;
+                            MethodInvocation methodInvocation = (MethodInvocation)(node.getParent());
+                            IMethodBinding binding = methodInvocation.resolveMethodBinding();
+                            if (binding != null) nonNullBinding[0]++;
+                            if (binding == null)
+                            {
+                                printLambdaInfo(lambda);
+                                System.out.println(node);
                             }
-                        });
+                        }
+                        return true;
                     }
-                    break;
-                }
+                });
+                break;
             }
         }
-        int built_in = 0;
-        for (String methodName : methodFullNameFreq.keySet())
-        {
-            if (!methodName.equals("self defined"))
-            {
-                built_in += methodFullNameFreq.get(methodName);
-            }
-        }
-        methodFullNameFreq.entrySet().stream().sorted(Map.Entry.<String, Integer>comparingByValue()).forEach(System.out::println);
-        System.out.println("built-in: " + built_in);
-        System.out.println("self-defined: " + methodFullNameFreq.get("self defined"));
-        System.out.println("lambda count: " + lambdaCount);
-        System.out.println("method invocation count: " + methodInvocationCount);
+        System.out.println("lambda in method invocation: " + lambdaCount[0]);
+        System.out.println("resolved method binding: " + nonNullBinding[0]);
     }
 
     static void parentNodeTypeAnalysis(List<SimplifiedModifiedLambda> lambdas)
@@ -796,9 +743,9 @@ public class RemovedLambdaFeatureAnalysis
         List<SimplifiedModifiedLambda> simplifiedModifiedLambdaList = new ArrayList<>();
         List<SimplifiedModifiedLambda> lambdasNotInDeletedEdit = new ArrayList<>();
         try {
-            String serPath = "ser/bad-lambdas/test";
+            String serPath = "ser/bad-lambdas/remote";
             //String[] paths = {serPath + "\\03-15", serPath + "\\03-16", serPath + "\\03-17", serPath + "\\03-18"};
-            String[] paths = {serPath + "/04-05"};
+            String[] paths = {serPath};
             for (String path : paths)
             {
                 File file = new File(path);
@@ -823,7 +770,7 @@ public class RemovedLambdaFeatureAnalysis
 
             SimplifiedModifiedLambda[] lambdasNotInDeletedEditArray = new SimplifiedModifiedLambda[lambdasNotInDeletedEdit.size()];
             lambdasNotInDeletedEdit.toArray(lambdasNotInDeletedEditArray);
-            FileOutputStream fileOut = new FileOutputStream("ser/bad-lambdas/" + "51repos-filtered-without-edit-limit.ser");
+            FileOutputStream fileOut = new FileOutputStream("ser/bad-lambdas/" + "106repos-filtered-without-edit-limit.ser");
             ObjectOutputStream serOut = new ObjectOutputStream(fileOut);
             serOut.writeObject(lambdasNotInDeletedEditArray);
             serOut.close();
@@ -852,12 +799,12 @@ public class RemovedLambdaFeatureAnalysis
 
                 if (!formatted.contains("-")) return "FALSE";
                 if (!StringUtils.isNumeric(formatted.split("-")[1])) return "FALSE";
-                if (!formatted.split("-")[0].equals(repoName) || !StringUtils.isNumeric(formatted.split("-")[1])) {
-                    System.out.println("################");
-                    System.out.println(formatted);
-                    System.out.println(lambda.commitURL);
-                    System.out.println(lambda.commitMessage);
-                }
+//                if (!formatted.split("-")[0].equals(repoName) || !StringUtils.isNumeric(formatted.split("-")[1])) {
+//                    System.out.println("################");
+//                    System.out.println(formatted);
+//                    System.out.println(lambda.commitURL);
+//                    System.out.println(lambda.commitMessage);
+//                }
                 return "https://issues.apache.org/jira/browse/" + formatted;
             }
             if (msg.startsWith("[" + repoName))
@@ -865,12 +812,12 @@ public class RemovedLambdaFeatureAnalysis
                 String formatted = msg.substring(1, msg.indexOf("]")).split(",")[0];
                 if (!formatted.contains("-")) return "FALSE";
                 if (!StringUtils.isNumeric(formatted.split("-")[1])) return "FALSE";
-                if (!formatted.split("-")[0].equals(repoName) || !StringUtils.isNumeric(formatted.split("-")[1])) {
-                    System.out.println("################");
-                    System.out.println(formatted);
-                    System.out.println(lambda.commitURL);
-                    System.out.println(lambda.commitMessage);
-                }
+//                if (!formatted.split("-")[0].equals(repoName) || !StringUtils.isNumeric(formatted.split("-")[1])) {
+//                    System.out.println("################");
+//                    System.out.println(formatted);
+//                    System.out.println(lambda.commitURL);
+//                    System.out.println(lambda.commitMessage);
+//                }
                 return "https://issues.apache.org/jira/browse/" + formatted;
             }
 
@@ -1079,7 +1026,7 @@ public class RemovedLambdaFeatureAnalysis
         return commitURL + "#diff-" + diffHash + leftOrRight + beginLine;
     }
 
-    public static void main(String[] args) throws IOException, CoreException, ClassNotFoundException, GitAPIException {
+    public static void main1(String[] args) throws IOException, CoreException, ClassNotFoundException, GitAPIException {
         //filterLambdasInDeleteEdit();
         FileInputStream fileIn = new FileInputStream("ser/bad-lambdas/51repos-filtered-without-edit-limit.ser");
         ObjectInputStream in = new ObjectInputStream(fileIn);
@@ -1095,7 +1042,11 @@ public class RemovedLambdaFeatureAnalysis
             if (proportion >= threshold) filteredLambdaList.add(simplifiedModifiedLambda);
         }
         //System.out.println(filteredLambdaList.size());
-        authorAnalysis(filteredLambdaList);
-        //methodInvocationAnalysis(filteredLambdaList);
+        //authorAnalysis(filteredLambdaList);
+        stateAnalysis(filteredLambdaList);
+    }
+    public static void main(String[] args)
+    {
+        filterLambdasInDeleteEdit();
     }
 }
